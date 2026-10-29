@@ -1,0 +1,3 @@
+import { View, StyleSheet } from 'react-native'; import type { ReactNode } from 'react'; import { AppText } from './AppText'; import { spacing } from '@/src/theme';
+export function AppHeader({ title, subtitle, right }: { title: string; subtitle?: string; right?: ReactNode }) { return <View style={styles.row}><View style={styles.copy}><AppText variant="title">{title}</AppText>{subtitle && <AppText muted>{subtitle}</AppText>}</View>{right}</View>; }
+const styles = StyleSheet.create({ row: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: spacing.md }, copy: { flex: 1 } });

@@ -1,0 +1,3 @@
+import { StyleSheet, View } from 'react-native'; import { AppText } from '@/src/components/ui'; import { colors, spacing } from '@/src/theme'; import { formatINR, formatRatePerSqft } from '../utils/formatters';
+export function PlotPrice({ finalAmount, ratePerSqft }: { finalAmount?: number; ratePerSqft?: number }) { return <View style={styles.container}><AppText variant="title" style={styles.price}>{formatINR(finalAmount)}</AppText><AppText variant="caption" muted>{formatRatePerSqft(ratePerSqft)}</AppText></View>; }
+const styles = StyleSheet.create({ container: { gap: spacing.xs }, price: { color: colors.primary } });

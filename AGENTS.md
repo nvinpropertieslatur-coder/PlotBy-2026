@@ -1,41 +1,26 @@
-This is an Expo/React Native mobile application. Prioritize mobile-first patterns, performance, and cross-platform compatibility.
+# PLOTBY — AI DEVELOPMENT INSTRUCTIONS
 
-## Expo has changed — do not trust your training data
+Plotby is a map-first real-estate app built with Expo, React Native, TypeScript, Expo Router, Supabase, and `react-native-maps`. The current map uses configurable OpenStreetMap-compatible `UrlTile` imagery and local sample plots; backend data is not connected yet.
 
-Expo ships breaking changes every SDK release. APIs you remember are likely renamed, moved, or removed. Before writing any code that touches an Expo, EAS, or React Native API:
+## Product rules
 
-1. Read the major version of the `expo` package in `package.json`.
-2. Fetch the matching versioned docs: `https://docs.expo.dev/versions/v<major>.0.0/`
-3. For anything else, fetch https://docs.expo.dev/llms.txt — an index of all Expo docs with corrections to common LLM misconceptions. Follow its links to the specific page you need; never answer from memory.
+- Use exactly three tabs: Property, Offers, Profile.
+- Add Property belongs inside Profile.
+- Support only Add Plot in the initial release.
+- Use the dark premium visual system: background `#101310`, surface `#1C211C`, elevated surface `#282E28`, neon primary `#C9FF32`, yellow accent `#F6C92B`, primary text `#F7F9F5`, muted text `#A7B0A5`, border `#343B34`, error `#FF6666`.
 
-## Commands
+## Engineering rules
 
-Use `bunx` instead of `npx` if the project uses bun (`bun.lock` present).
+1. Inspect the codebase before changing it.
+2. Reuse components before creating new ones; keep screens thin and feature logic under `src`.
+3. Follow relevant Plotby and official Expo skills.
+4. Centralize theme values; never hardcode brand styling in screens.
+5. Use typed interfaces, schemas, loading/error/empty states, accessibility labels, safe areas, and adequate touch targets.
+6. Keep pricing and validation logic single-sourced and test important business rules.
+7. Never expose Supabase service-role secrets. Do not add MapLibre Native, WebViews, or custom development builds for the current map phase.
+8. Keep map tile URLs configurable, preserve attribution, and do not assume public OSM tile servers support unrestricted production traffic.
+9. Do not change unrelated functionality.
 
-```bash
-npx expo install <package>  # ALWAYS use instead of npm/yarn/pnpm/bun add — resolves SDK-compatible versions
-npx expo start              # start the dev server
-npx expo lint               # lint
-npx tsc --noEmit            # typecheck
-npx expo-doctor             # diagnose dependency and config issues
-npx expo install --fix      # fix incompatible package versions
-```
+## Workflow
 
-Run lint and typecheck before declaring any task done.
-
-## Navigation & Routing
-
-- Use **Expo Router** for all navigation. Routes live in `src/app/` — every file there is a screen, `_layout.tsx` files define navigators. Keep non-route code (components, hooks, utils) outside `src/app/`.
-- Import `Link`, `router`, and `useLocalSearchParams` from `expo-router`.
-- Docs: https://docs.expo.dev/router/introduction.md
-
-## Building with EAS
-
-Use EAS to build, sign, and submit the app in the cloud (`eas build`, `eas submit`) and to ship over-the-air updates (`eas update`) — no local Xcode or Android Studio required. Run EAS CLI as `bunx eas-cli <command>` in Bun projects, or `npx eas-cli@latest <command>` otherwise; substitute that for bare `eas` in docs examples.
-Docs: https://docs.expo.dev/eas/index.md
-
-## Rules
-
-- If `ios/` and `android/` directories do not exist, they are generated (Continuous Native Generation). Never create or edit them by hand — configure native behavior in `app.json` and config plugins.
-- Expo Go only includes its bundled native modules. After adding a library with native code, the app needs a development build: `npx expo run:ios|android` locally, or `eas build --profile development`.
-- Prefer recommended Expo modules over third-party libraries, and check your available skills before adding dependencies. Docs: https://docs.expo.dev/versions/latest/index.md
+For each phase, inspect existing code, state scope, identify reusable pieces, implement only the requested phase, run available TypeScript/lint/tests, and report changed files and test results. Do not generate the entire app in one task.

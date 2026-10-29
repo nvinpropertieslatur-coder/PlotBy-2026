@@ -1,0 +1,3 @@
+import { View, StyleSheet } from 'react-native'; import type { ReactNode } from 'react'; import { AppText } from './AppText'; import { colors, spacing } from '@/src/theme';
+export function AppFormField({ label, required, error, children }: { label?: string; required?: boolean; error?: string; children: ReactNode }) { return <View style={styles.container}>{label && <AppText variant="label">{label}{required ? ' *' : ''}</AppText>}{children}{error && <AppText variant="caption" style={styles.error}>{error}</AppText>}</View>; }
+const styles = StyleSheet.create({ container: { gap: spacing.xs }, error: { color: colors.error } });

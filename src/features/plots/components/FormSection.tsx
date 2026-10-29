@@ -1,0 +1,2 @@
+import type { ReactNode } from 'react'; import { AppCard, AppText } from '@/src/components/ui'; import { spacing } from '@/src/theme';
+export function FormSection({ title, children }: { title: string; children: ReactNode }) { return <AppCard><AppText variant="title">{title}</AppText><AppCard style={{ marginTop: spacing.md, padding: 0, borderWidth: 0, backgroundColor: 'transparent', gap: spacing.lg }}>{children}</AppCard></AppCard>; }

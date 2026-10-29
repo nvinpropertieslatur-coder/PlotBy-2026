@@ -1,0 +1,5 @@
+export type DiscountType = 'none' | 'percentage' | 'flat';
+export function resolvePlotArea(width: number, length: number, manualArea: number, previousAutoArea = ''): number { const hasManual = manualArea > 0 && String(manualArea) !== previousAutoArea; return hasManual ? manualArea : width > 0 && length > 0 ? width * length : 0; }
+function safeNumber(value: number): number { return Number.isFinite(value) && value > 0 ? value : 0; }
+function cents(value: number): number { return Math.round(value * 100) / 100; }
+export function calculatePlotPricing(area: number, rate: number, discountType: DiscountType, discountValue: number) { const baseAmount = cents(safeNumber(area) * safeNumber(rate)); const cleanDiscount = safeNumber(discountValue); const discountAmount = discountType === 'percentage' ? cents(baseAmount * Math.min(100, cleanDiscount) / 100) : discountType === 'flat' ? cents(Math.min(baseAmount, cleanDiscount)) : 0; return { baseAmount, discountAmount, finalAmount: cents(Math.max(0, baseAmount - discountAmount)) }; }

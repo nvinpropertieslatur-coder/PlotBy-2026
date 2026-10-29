@@ -1,0 +1,4 @@
+import { createContext, useContext, type ReactNode } from 'react'; import { FormProvider, useForm, type UseFormReturn } from 'react-hook-form'; import { zodResolver } from '@hookform/resolvers/zod'; import { plotFormSchema } from './schema'; import { plotFormDefaults } from './defaults'; import type { PlotFormValues } from './types';
+const PlotFormContext = createContext<UseFormReturn<PlotFormValues> | null>(null);
+export function PlotFormProvider({ children }: { children: ReactNode }) { const methods = useForm<PlotFormValues>({ defaultValues: plotFormDefaults, resolver: zodResolver(plotFormSchema), mode: 'onTouched' }); return <PlotFormContext.Provider value={methods}><FormProvider {...methods}>{children}</FormProvider></PlotFormContext.Provider>; }
+export function usePlotForm(): UseFormReturn<PlotFormValues> { const context = useContext(PlotFormContext); if (!context) throw new Error('usePlotForm must be used inside PlotFormProvider'); return context; }

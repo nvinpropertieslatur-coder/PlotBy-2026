@@ -1,0 +1,5 @@
+import type { PlotImageAsset } from './types';
+export function dedupeImages(existing: readonly PlotImageAsset[], incoming: readonly PlotImageAsset[]): PlotImageAsset[] { const seen = new Set(existing.map((image) => image.uri)); return [...existing, ...incoming.filter((image) => !seen.has(image.uri)).map((image) => { seen.add(image.uri); return image; })].map((image, order) => ({ ...image, order })); }
+export function removeImage(images: readonly PlotImageAsset[], id: string): { images: PlotImageAsset[]; coverId: string } { const next = images.filter((image) => image.id !== id).map((image, order) => ({ ...image, order })); return { images: next, coverId: next[0]?.id ?? '' }; }
+export function reorderImages(images: readonly PlotImageAsset[], from: number, to: number): PlotImageAsset[] { if (to < 0 || to >= images.length) return [...images]; const next = [...images]; [next[from], next[to]] = [next[to], next[from]]; return next.map((image, order) => ({ ...image, order })); }
+export function chooseCover(images: readonly PlotImageAsset[], id: string): string { return images.some((image) => image.id === id) ? id : images[0]?.id ?? ''; }
