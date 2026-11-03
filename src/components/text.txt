@@ -1,0 +1,10 @@
+Usage
+
+Later inside MyPropertiesScreen.js:
+
+<SearchBarV1
+  value={searchText}
+  onChangeText={setSearchText}
+  placeholder="Search location, property..."
+  onFilterPress={() => {}}
+/>

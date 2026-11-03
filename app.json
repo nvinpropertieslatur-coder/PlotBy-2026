@@ -1,0 +1,15 @@
+{
+  "expo": {
+    "name": "Plotby",
+    "slug": "plotby",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "dark",
+    "ios": {
+      "supportsTablet": true
+    },
+    "android": {
+      "package": "com.plotby.app"
+    }
+  }
+}

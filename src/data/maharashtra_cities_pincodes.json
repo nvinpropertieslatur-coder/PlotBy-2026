@@ -1,0 +1,345 @@
+{
+  "state": "Maharashtra",
+  "country": "India",
+  "description": "City-level starter dataset for property-app dropdowns. A city can have multiple PIN codes; primaryPincode is used for automatic default selection.",
+  "source_note": "Postal PIN information should be treated as post-office based rather than a single city-wide code. For authoritative current postal data, use India Post / data.gov.in.",
+  "cities": [
+    {
+      "city": "Mumbai",
+      "district": "Mumbai City",
+      "pincodes": [
+        "400001"
+      ],
+      "primaryPincode": "400001"
+    },
+    {
+      "city": "Thane",
+      "district": "Thane",
+      "pincodes": [
+        "400601"
+      ],
+      "primaryPincode": "400601"
+    },
+    {
+      "city": "Navi Mumbai",
+      "district": "Thane",
+      "pincodes": [
+        "400614",
+        "400703"
+      ],
+      "primaryPincode": "400614"
+    },
+    {
+      "city": "Kalyan-Dombivli",
+      "district": "Thane",
+      "pincodes": [
+        "421301",
+        "421201"
+      ],
+      "primaryPincode": "421301"
+    },
+    {
+      "city": "Palghar",
+      "district": "Palghar",
+      "pincodes": [
+        "401404"
+      ],
+      "primaryPincode": "401404"
+    },
+    {
+      "city": "Pune",
+      "district": "Pune",
+      "pincodes": [
+        "411001",
+        "411002"
+      ],
+      "primaryPincode": "411001"
+    },
+    {
+      "city": "Pimpri-Chinchwad",
+      "district": "Pune",
+      "pincodes": [
+        "411018",
+        "411027"
+      ],
+      "primaryPincode": "411018"
+    },
+    {
+      "city": "Solapur",
+      "district": "Solapur",
+      "pincodes": [
+        "413001"
+      ],
+      "primaryPincode": "413001"
+    },
+    {
+      "city": "Kolhapur",
+      "district": "Kolhapur",
+      "pincodes": [
+        "416001",
+        "416002"
+      ],
+      "primaryPincode": "416001"
+    },
+    {
+      "city": "Sangli",
+      "district": "Sangli",
+      "pincodes": [
+        "416416"
+      ],
+      "primaryPincode": "416416"
+    },
+    {
+      "city": "Miraj",
+      "district": "Sangli",
+      "pincodes": [
+        "416410"
+      ],
+      "primaryPincode": "416410"
+    },
+    {
+      "city": "Satara",
+      "district": "Satara",
+      "pincodes": [
+        "415001"
+      ],
+      "primaryPincode": "415001"
+    },
+    {
+      "city": "Nashik",
+      "district": "Nashik",
+      "pincodes": [
+        "422001",
+        "422002"
+      ],
+      "primaryPincode": "422001"
+    },
+    {
+      "city": "Malegaon",
+      "district": "Nashik",
+      "pincodes": [
+        "423203"
+      ],
+      "primaryPincode": "423203"
+    },
+    {
+      "city": "Ahmednagar (Ahilyanagar)",
+      "district": "Ahilyanagar",
+      "pincodes": [
+        "414001"
+      ],
+      "primaryPincode": "414001"
+    },
+    {
+      "city": "Dhule",
+      "district": "Dhule",
+      "pincodes": [
+        "424001"
+      ],
+      "primaryPincode": "424001"
+    },
+    {
+      "city": "Jalgaon",
+      "district": "Jalgaon",
+      "pincodes": [
+        "425001"
+      ],
+      "primaryPincode": "425001"
+    },
+    {
+      "city": "Bhusawal",
+      "district": "Jalgaon",
+      "pincodes": [
+        "425201"
+      ],
+      "primaryPincode": "425201"
+    },
+    {
+      "city": "Nandurbar",
+      "district": "Nandurbar",
+      "pincodes": [
+        "425412"
+      ],
+      "primaryPincode": "425412"
+    },
+    {
+      "city": "Chhatrapati Sambhajinagar",
+      "district": "Chhatrapati Sambhajinagar",
+      "pincodes": [
+        "431001",
+        "431005"
+      ],
+      "primaryPincode": "431001"
+    },
+    {
+      "city": "Jalna",
+      "district": "Jalna",
+      "pincodes": [
+        "431203"
+      ],
+      "primaryPincode": "431203"
+    },
+    {
+      "city": "Beed",
+      "district": "Beed",
+      "pincodes": [
+        "431122",
+        "431517"
+      ],
+      "primaryPincode": "431122"
+    },
+    {
+      "city": "Latur",
+      "district": "Latur",
+      "pincodes": [
+        "413512"
+      ],
+      "primaryPincode": "413512"
+    },
+    {
+      "city": "Nanded",
+      "district": "Nanded",
+      "pincodes": [
+        "431601"
+      ],
+      "primaryPincode": "431601"
+    },
+    {
+      "city": "Parbhani",
+      "district": "Parbhani",
+      "pincodes": [
+        "431401"
+      ],
+      "primaryPincode": "431401"
+    },
+    {
+      "city": "Hingoli",
+      "district": "Hingoli",
+      "pincodes": [
+        "431513"
+      ],
+      "primaryPincode": "431513"
+    },
+    {
+      "city": "Dharashiv",
+      "district": "Dharashiv",
+      "pincodes": [
+        "413501"
+      ],
+      "primaryPincode": "413501"
+    },
+    {
+      "city": "Nagpur",
+      "district": "Nagpur",
+      "pincodes": [
+        "440001",
+        "440002"
+      ],
+      "primaryPincode": "440001"
+    },
+    {
+      "city": "Wardha",
+      "district": "Wardha",
+      "pincodes": [
+        "442001"
+      ],
+      "primaryPincode": "442001"
+    },
+    {
+      "city": "Amravati",
+      "district": "Amravati",
+      "pincodes": [
+        "444601"
+      ],
+      "primaryPincode": "444601"
+    },
+    {
+      "city": "Akola",
+      "district": "Akola",
+      "pincodes": [
+        "444001"
+      ],
+      "primaryPincode": "444001"
+    },
+    {
+      "city": "Buldhana",
+      "district": "Buldhana",
+      "pincodes": [
+        "443001"
+      ],
+      "primaryPincode": "443001"
+    },
+    {
+      "city": "Washim",
+      "district": "Washim",
+      "pincodes": [
+        "444505"
+      ],
+      "primaryPincode": "444505"
+    },
+    {
+      "city": "Yavatmal",
+      "district": "Yavatmal",
+      "pincodes": [
+        "445001"
+      ],
+      "primaryPincode": "445001"
+    },
+    {
+      "city": "Chandrapur",
+      "district": "Chandrapur",
+      "pincodes": [
+        "442401"
+      ],
+      "primaryPincode": "442401"
+    },
+    {
+      "city": "Gadchiroli",
+      "district": "Gadchiroli",
+      "pincodes": [
+        "442605"
+      ],
+      "primaryPincode": "442605"
+    },
+    {
+      "city": "Gondia",
+      "district": "Gondia",
+      "pincodes": [
+        "441601"
+      ],
+      "primaryPincode": "441601"
+    },
+    {
+      "city": "Bhandara",
+      "district": "Bhandara",
+      "pincodes": [
+        "441904"
+      ],
+      "primaryPincode": "441904"
+    },
+    {
+      "city": "Ratnagiri",
+      "district": "Ratnagiri",
+      "pincodes": [
+        "415612"
+      ],
+      "primaryPincode": "415612"
+    },
+    {
+      "city": "Alibag",
+      "district": "Raigad",
+      "pincodes": [
+        "402201"
+      ],
+      "primaryPincode": "402201"
+    },
+    {
+      "city": "Oros",
+      "district": "Sindhudurg",
+      "pincodes": [
+        "416812"
+      ],
+      "primaryPincode": "416812"
+    }
+  ]
+}
