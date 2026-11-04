@@ -7,6 +7,7 @@ import { AppText } from "@/src/browse/components/ui";
 import { colors, spacing } from "@/src/browse/theme";
 import type { Plot } from "@/src/browse/features/map/types";
 
+import { formatPriceInLakhsCrores } from "../../../../utils/priceFormatter";
 import {
   formatINR,
   formatPlotArea,
@@ -48,21 +49,7 @@ function Feature({
 }
 
 function displayPrice(value: number): string {
-  if (!Number.isFinite(value)) return "Price unavailable";
-
-  if (value >= 10000000) {
-    return `₹${(value / 10000000).toLocaleString("en-IN", {
-      maximumFractionDigits: 2,
-    })} Cr`;
-  }
-
-  if (value >= 100000) {
-    return `₹${(value / 100000).toLocaleString("en-IN", {
-      maximumFractionDigits: 2,
-    })} L`;
-  }
-
-  return formatINR(value);
+  return formatPriceInLakhsCrores(value);
 }
 
 export const PlotCard = memo(function PlotCard({

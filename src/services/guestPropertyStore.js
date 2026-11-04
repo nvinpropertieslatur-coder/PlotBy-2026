@@ -12,8 +12,8 @@ export function createGuestPropertyStore(storage, makeId = () => `guest-test:${D
     if (!value) return [];
     let rows;
     try { rows = JSON.parse(value); }
-    catch { throw new Error('Guest test data could not be read on this device. No server records were requested.'); }
-    if (!Array.isArray(rows)) throw new Error('Guest test storage has an unsupported format.');
+    catch { throw new Error('Saved property data could not be read on this device. No server records were requested.'); }
+    if (!Array.isArray(rows)) throw new Error('Saved property storage has an unsupported format.');
     return rows.filter(isGuestRecord);
   };
   const mutate = operation => {
@@ -30,13 +30,13 @@ export function createGuestPropertyStore(storage, makeId = () => `guest-test:${D
     getProperties: async () => { await pending; return read(); },
     saveProperty: (data, propertyId) => mutate(rows => {
       const existing = propertyId ? rows.find(row => row.id === propertyId) : null;
-      if (propertyId && (!isGuestPropertyId(propertyId) || !existing)) throw new Error('This guest test property is no longer available on this device.');
+      if (propertyId && (!isGuestPropertyId(propertyId) || !existing)) throw new Error('This property is no longer available on this device.');
       const now = new Date().toISOString();
-      const record = { ...data, id: existing?.id || makeId(), user_id: null, storage_mode: 'guest-test', title: 'Guest test property', property_type: data.property_type || 'Guest test property', status: 'unverified', created_at: existing?.created_at || now, updated_at: now };
+      const record = { ...data, id: existing?.id || makeId(), user_id: null, storage_mode: 'guest-test', title: 'Property', property_type: data.property_type || data.type || 'Property', status: 'unverified', created_at: existing?.created_at || now, updated_at: now };
       return { next: existing ? rows.map(row => row.id === propertyId ? record : row) : [record, ...rows], value: record };
     }),
     deleteProperty: propertyId => mutate(rows => {
-      if (!isGuestPropertyId(propertyId) || !rows.some(row => row.id === propertyId)) throw new Error('Guest test property not found on this device.');
+      if (!isGuestPropertyId(propertyId) || !rows.some(row => row.id === propertyId)) throw new Error('Property not found on this device.');
       return { next: rows.filter(row => row.id !== propertyId), value: true };
     }),
   };

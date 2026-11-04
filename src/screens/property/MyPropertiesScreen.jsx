@@ -44,6 +44,8 @@ import GlassCardV1 from '../../components/GlassCardV1';
 import ProfileAvatarV1 from '../../components/ProfileAvatarV1';
 
 import ScreenHeaderV1 from '../../components/ScreenHeaderV1';
+import { NetworkErrorModal } from '../../components/modals';
+import { isNetworkError } from '../../utils/networkUtils';
 
 
 
@@ -60,6 +62,8 @@ import ScreenHeaderV1 from '../../components/ScreenHeaderV1';
    ========================================================= */
 
 const filters = [
+  { key: 'active', label: 'Active' },
+  { key: 'pending', label: 'Pending' },
 
   {
 
@@ -192,6 +196,8 @@ const MyPropertiesScreen = ({
   const [loadError, setLoadError] = useState('');
 
   const [workspaceMode, setWorkspaceMode] = useState(null);
+  const [reloadToken, setReloadToken] = useState(0);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
   useFocusEffect(React.useCallback(() => {
     let active = true;
     let generation = 0;
@@ -219,7 +225,7 @@ const MyPropertiesScreen = ({
       refreshTimer = setTimeout(() => { if (active) void load(); }, 0);
     });
     return () => { active = false; generation++; clearTimeout(refreshTimer); subscription.unsubscribe(); };
-  }, []));
+  }, [reloadToken]));
 
   const [search, setSearch] = useState('');
 
@@ -291,9 +297,9 @@ const MyPropertiesScreen = ({
 
         property &&
 
-        typeof property.type === 'string' &&
+        typeof (property.property_type || property.type) === 'string' &&
 
-        property.type.toLowerCase() === type.toLowerCase()
+        (property.property_type || property.type).toLowerCase() === type.toLowerCase()
 
     ).length;
 
@@ -315,7 +321,8 @@ const MyPropertiesScreen = ({
 
       const status = typeof property.status === 'string' ? property.status.toLowerCase() : '';
 
-      const type = typeof property.type === 'string' ? property.type.toLowerCase() : '';
+      const typeValue = property.property_type || property.type;
+      const type = typeof typeValue === 'string' ? typeValue.toLowerCase() : '';
 
       const title = typeof property.title === 'string' ? property.title.toLowerCase() : '';
 
@@ -411,10 +418,6 @@ const MyPropertiesScreen = ({
 
     >
 
-      {workspaceMode === 'guest' && <GlassCardV1 style={{ marginHorizontal: 20, marginTop: 12, padding: 12 }}>
-        <Text style={{ color: colorsV1.primaryColor, fontWeight: '700' }}>Guest testing · this device only</Text>
-        <Text style={styles.emptyText}>Test submissions stay on this device and are separate from account properties. Sign in from the profile menu to view personal properties.</Text>
-      </GlassCardV1>}
       <ScrollView
 
         showsVerticalScrollIndicator={false}
@@ -479,7 +482,7 @@ const MyPropertiesScreen = ({
 
             <Text style={styles.welcomeSubtitle}>
 
-              Manage, edit and track your
+              Manage, edit, and track your
 
               property listings.
 
@@ -810,8 +813,9 @@ const MyPropertiesScreen = ({
       )}
 
       {!loading && loadError !== '' && (
-
-        <Text style={styles.emptyText}>{loadError}</Text>
+        <Pressable onPress={() => { setLoadError(''); setLoading(true); setReloadToken((value) => value + 1); }} accessibilityRole="button">
+          <Text style={styles.emptyText}>{loadError} · Tap to retry</Text>
+        </Pressable>
 
       )}
 
@@ -869,13 +873,13 @@ const MyPropertiesScreen = ({
 
             <Text style={styles.emptyTitle}>
 
-              {workspaceMode === 'guest' && properties.length === 0 ? 'No guest test properties added yet' : 'No properties found'}
+              {properties.length === 0 ? 'No properties added yet' : 'No properties found'}
 
             </Text>
 
             <Text style={styles.emptyText}>
 
-              {workspaceMode === 'guest' && properties.length === 0 ? 'Add a test property without signing in. Personal account properties are not shown in guest mode.' : 'Try changing your search, category or filter.'}
+              {properties.length === 0 ? 'Add a property to see it here.' : 'Try changing your search, category or filter.'}
 
             </Text>
 
@@ -925,6 +929,18 @@ const MyPropertiesScreen = ({
 
       
 
+    <NetworkErrorModal
+        visible={showNetworkModal}
+        loading={loading}
+        onRetry={() => {
+          setShowNetworkModal(false);
+          setLoading(true);
+          setReloadToken((v) => v + 1);
+        }}
+        onCancel={() => {
+          setShowNetworkModal(false);
+        }}
+      />
     </SafeAreaView>
 
   );

@@ -68,7 +68,7 @@ export async function saveProperty(data, { propertyId, propertyType } = {}) {
     if (propertyId && !isGuestPropertyId(propertyId)) throw new PropertyAccessError('AUTH_REQUIRED');
     return { mode: 'guest', property: await guestPropertyStore.saveProperty({ ...payload, type: propertyType || 'plot' }, propertyId) };
   }
-  if (propertyId && isGuestPropertyId(propertyId)) throw new Error('Guest test properties stay on this device and are separate from account properties.');
+  if (propertyId && isGuestPropertyId(propertyId)) throw new Error('Properties saved on this device are separate from account properties.');
   await checkPropertyOwnership();
   await checkSameAccount(user);
   payload[ownerColumn()] = user.id;
@@ -100,7 +100,7 @@ export async function deleteProperty(propertyId) {
     await guestPropertyStore.deleteProperty(propertyId);
     return { mode: 'guest' };
   }
-  if (isGuestPropertyId(propertyId)) throw new Error('Guest test properties are separate from account properties.');
+  if (isGuestPropertyId(propertyId)) throw new Error('Properties saved on this device are separate from account properties.');
   await checkSameAccount(user);
   const { data, error } = await supabase.from('properties').delete().eq('id', propertyId).filter(ownerColumn(), 'eq', user.id).select('id');
   if (error) checkedError(error);

@@ -1,8 +1,8 @@
 export class PropertyAccessError extends Error {
   constructor(code) {
     super(code === 'AUTH_REQUIRED'
-      ? 'This saved account property is not available in guest mode.'
-      : 'Your account property storage needs an owner column before it can be used. Guest testing is still available when signed out.');
+      ? 'This saved account property is available only after signing in.'
+      : 'Your account property storage needs an owner column before it can be used.');
     this.name = 'PropertyAccessError';
     this.code = code;
   }

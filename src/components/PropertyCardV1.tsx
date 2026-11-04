@@ -5,6 +5,7 @@ import {
   Text,
   Pressable,
   StyleSheet,
+  Image,
 } from 'react-native';
 
 import colorsV1 from '../theme/colors.v1';
@@ -13,21 +14,9 @@ import typographyV1 from '../theme/typography.v1';
 import GlassCardV1 from './GlassCardV1';
 import StatusBadgeV1 from './StatusBadgeV1';
 
-const formatPrice = (amount) => {
-  const value = Number(amount);
+import { formatPriceInLakhsCrores } from '../utils/priceFormatter';
 
-  if (!Number.isFinite(value)) return 'Price unavailable';
-
-  if (value >= 10000000) {
-    return `₹${(value / 10000000).toFixed(2)} Cr`;
-  }
-
-  if (value >= 100000) {
-    return `₹${(value / 100000).toFixed(2)} Lakh`;
-  }
-
-  return `₹${value.toLocaleString('en-IN')}`;
-};
+const formatPrice = (amount) => formatPriceInLakhsCrores(amount);
 
 const PropertyCardV1 = ({
   property,
@@ -47,6 +36,7 @@ const PropertyCardV1 = ({
     : 'Area unavailable';
 
   const price = formatPrice(property.total_amount);
+  const type = property.property_type || property.type || 'Property';
 
   // Use the actual title column if your table has one.
   const title =
@@ -63,12 +53,14 @@ const PropertyCardV1 = ({
       ]}
     >
       <GlassCardV1 style={styles.card}>
+        {property.images?.[0] && <Image source={{ uri: property.images[0] }} style={styles.image} />}
         {/* TOP SECTION */}
         <View style={styles.topRow}>
           <View style={styles.titleContainer}>
             <Text style={styles.title} numberOfLines={1}>
               {title}
             </Text>
+            <Text style={styles.type} numberOfLines={1}>{type}</Text>
 
             <View style={styles.locationRow}>
               <Text style={styles.locationIcon}>📍</Text>
@@ -145,6 +137,8 @@ const styles = StyleSheet.create({
   card: {
     padding: 18,
   },
+  image: { width: '100%', height: 140, borderRadius: 14, marginBottom: 14, backgroundColor: colorsV1.cardBackgroundLight },
+  type: { color: colorsV1.primaryColor, fontSize: 12, fontWeight: '700', marginTop: 4 },
 
   topRow: {
     flexDirection: 'row',

@@ -10,13 +10,13 @@ export default function PropertyWorkspace({ navigation }) {
     onEditProfile={() => navigation.navigate('EditProfile')}
     onSubscription={() => navigation.navigate('Subscription')}
     onAddProperty={() => navigation.navigate('AddProperty')}
-    onPropertyPress={property => navigation.navigate('PropertyDetails', { propertyId: String(property.id) })}
+    onPropertyPress={property => navigation.navigate('PropertyDetails', { propertyId: String(property.id), source: 'profile' })}
     onEditProperty={property => navigation.navigate('AddProperty', { property, propertyType: property.type || 'plot' })}
     onSignIn={() => navigation.navigate('SignIn', { returnTo: 'MyProperties' })}
     onAgentLogin={() => navigation.navigate('SignIn')}
     onBuilderLogin={() => navigation.navigate('SignIn')}
-    onSavedProperties={() => Alert.alert('Saved Properties', 'Saved properties are not implemented in the supplied application.')}
-    onHelp={() => Alert.alert('Help & Support', 'Contact your Plotby administrator for assistance.')}
+    onSavedProperties={() => navigation.navigate('SavedPlots')}
+    onHelp={() => navigation.navigate('Help')}
     onLogout={async () => {
       const { error } = await supabase.auth.signOut();
       if (error) Alert.alert('Sign out failed', error.message);

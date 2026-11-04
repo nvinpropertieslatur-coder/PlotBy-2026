@@ -17,6 +17,8 @@ export function propertyToPlot(record: PropertyRecord): Plot | null {
  address: text(record.address), town: text(record.city), pincode: text(record.pincode), facing,
  primaryFacing: facing[0], imageUris: images, photoUri: images[0], contactName: text(record.agent_full_name),
  contactNumber: text(record.agent_contact_number), description: text(record.description),
+ verified: record.verified === true || record.approved === true || record.status === 'verified',
+ reraRegistered: record.maha_rera_registered === true,
  propertyType: text(record.property_type) || text(record.type) || 'Property',
  status: status === 'active' || status === 'sold' || status === 'inactive' || status === 'draft' ? status : undefined };
 }

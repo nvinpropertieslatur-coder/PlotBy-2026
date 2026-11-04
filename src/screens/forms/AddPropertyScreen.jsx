@@ -25,6 +25,12 @@ import ContactDetailsStep from "./contactDetails";
 import propertyTypes from "./propertyTypes";
 
 import { showSuccessMessage } from '../../utils/showSuccessMessage';
+import {
+  NetworkErrorModal,
+  PropertyAddedModal,
+  MapValidationModal,
+} from '../../components/modals';
+import { isNetworkError } from '../../utils/networkUtils';
 import { saveProperty } from '../../services/propertyService';
 
 import styles from "./addpropertyStyle";
@@ -56,6 +62,12 @@ export default function AddPropertyScreen() {
 
   const [loading, setLoading] =
     useState(false);
+  const [locationError, setLocationError] = useState('');
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
+  const [showNetworkModal, setShowNetworkModal] = useState(false);
+  const [showMapValidationModal, setShowMapValidationModal] = useState(false);
+  const [openMapTrigger, setOpenMapTrigger] = useState(0);
+  const [savedResult, setSavedResult] = useState(null);
 
   // ============================================================
   // FORM DATA
@@ -111,6 +123,7 @@ export default function AddPropertyScreen() {
         longitude: null,
 
         selectedLocation: null,
+        isConfirmed: false,
       },
 
       contact: {
@@ -131,7 +144,15 @@ export default function AddPropertyScreen() {
             return { direction, selected: !!entry, value: entry?.split(':').slice(1).join(':').trim() || '' };
           }),
         },
-        location: { address: editingProperty.address || '', city: editingProperty.city || '', pincode: editingProperty.pincode || '', latitude: editingProperty.latitude, longitude: editingProperty.longitude, selectedLocation: editingProperty.latitude != null && editingProperty.longitude != null ? { latitude: editingProperty.latitude, longitude: editingProperty.longitude } : null },
+        location: {
+          address: editingProperty.address || '',
+          city: editingProperty.city || '',
+          pincode: editingProperty.pincode || '',
+          latitude: editingProperty.latitude,
+          longitude: editingProperty.longitude,
+          selectedLocation: editingProperty.latitude != null && editingProperty.longitude != null ? { latitude: editingProperty.latitude, longitude: editingProperty.longitude, isConfirmed: true } : null,
+          isConfirmed: editingProperty.latitude != null && editingProperty.longitude != null,
+        },
         contact: { fullName: editingProperty.agent_full_name || '', contact: editingProperty.agent_contact_number || '', hasQR: editingProperty.maha_rera_registered ? 'yes' : 'no', qrNumber: editingProperty.qr_code_number || '', qrImage: editingProperty.qr_code_image_url || '' },
       } : {}),
     }));
@@ -148,6 +169,9 @@ export default function AddPropertyScreen() {
   };
 
   const updateLocation = (data) => {
+    if (data?.isConfirmed && data?.latitude != null && data?.longitude != null) {
+      setLocationError('');
+    }
     setFormData((previous) => ({
       ...previous,
       location: data,
@@ -254,16 +278,28 @@ export default function AddPropertyScreen() {
   // ============================================================
 
   const validateLocation = () => {
-    const location =
-      formData.location;
+    const location = formData.location;
 
     const latitude = Number(location.latitude);
     const longitude = Number(location.longitude);
-    if (!Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
-      Alert.alert(
-        "Location Required",
-        "Please select a valid property location on the map before continuing."
-      );
+    const hasValidCoordinates =
+      location.latitude !== null &&
+      location.latitude !== undefined &&
+      location.longitude !== null &&
+      location.longitude !== undefined &&
+      Number.isFinite(latitude) &&
+      latitude >= -90 &&
+      latitude <= 90 &&
+      Number.isFinite(longitude) &&
+      longitude >= -180 &&
+      longitude <= 180;
+
+    const isConfirmed = Boolean(location.isConfirmed && hasValidCoordinates);
+
+    if (!isConfirmed) {
+      const message = "Please select and confirm your property location on the map before adding your property.";
+      setLocationError(message);
+      setShowMapValidationModal(true);
       return false;
     }
 
@@ -400,143 +436,91 @@ export default function AddPropertyScreen() {
 // ============================================================
 
 const handleSubmit = async () => {
-  if (loading) return;
+    if (loading) return;
 
-  try {
-    setLoading(true);
+    if (!validateProperty()) {
+      setStep(1);
+      return;
+    }
 
-    const property = formData.property;
-    const location = formData.location;
-    const contact = formData.contact;
+    if (!validateLocation()) {
+      setStep(2);
+      return;
+    }
 
-    // ========================================================
-    // CONVERT VALUES
-    // ========================================================
+    if (!validateContact()) {
+      setStep(3);
+      return;
+    }
 
-    const length = Number(property.length) || 0;
+    try {
+      setLoading(true);
 
-    const width = Number(property.width) || 0;
+      const property = formData.property;
+      const location = formData.location;
+      const contact = formData.contact;
 
-    const totalArea =
-      Number(property.totalArea) || 0;
+      const length = Number(property.length) || 0;
+      const width = Number(property.width) || 0;
+      const totalArea = Number(property.totalArea) || 0;
+      const ratePerSqft = Number(property.rate) || 0;
+      const discountRate =
+        property.discount === "yes" ? Number(property.discountRate) || 0 : 0;
+      const totalAmount = totalArea * (ratePerSqft - discountRate);
 
-    const ratePerSqft =
-      Number(property.rate) || 0;
+      const selectedFacing = (property.facing || [])
+        .filter((item) => item.selected)
+        .map((item) => {
+          if (item.value?.trim()) {
+            return `${item.direction}: ${item.value}`;
+          }
+          return item.direction;
+        });
 
-    const discountRate =
-      property.discount === "yes"
-        ? Number(property.discountRate) || 0
-        : 0;
+      const propertyData = {
+        length: length,
+        width: width,
+        total_area: totalArea,
+        rate_per_sqft: ratePerSqft,
+        discount: property.discount === "yes",
+        total_amount: totalAmount,
+        facing: selectedFacing,
+        social_media_link: property.socialMediaLink || null,
+        address: location.address || null,
+        city: location.city || null,
+        pincode: location.pincode || null,
+        latitude: Number(location.latitude),
+        longitude: Number(location.longitude),
+        agent_full_name: contact.fullName || null,
+        agent_contact_number: contact.contact || null,
+        maha_rera_registered: contact.hasQR === "yes",
+        qr_code_number: contact.qrNumber || null,
+        qr_code_image_url: contact.qrImage || null,
+      };
 
-    // ========================================================
-    // CALCULATE TOTAL AMOUNT
-    // ========================================================
-
-    const totalAmount =
-      totalArea *
-      (ratePerSqft - discountRate);
-
-    // ========================================================
-    // CONVERT FACING ARRAY TO TEXT
-    // ========================================================
-
-    const selectedFacing =
-    (property.facing || [])
-      .filter((item) => item.selected)
-      .map((item) => {
-        if (item.value?.trim()) {
-          return `${item.direction}: ${item.value}`;
-        }
-
-        return item.direction;
+      // 1. Submit the actual property data to Supabase (or isolated test store)
+      // 2. Wait for successful database confirmation
+      const result = await saveProperty(propertyData, {
+        propertyId: editingProperty?.id,
+        propertyType,
       });
-    // ========================================================
-    // PREPARE DATA FOR SUPABASE
-    // ========================================================
 
-    const propertyData = {
-      length: length,
-
-      width: width,
-
-      total_area: totalArea,
-
-      rate_per_sqft: ratePerSqft,
-
-      discount:
-        property.discount === "yes",
-
-      total_amount: totalAmount,
-
-      facing: selectedFacing,
-
-      social_media_link:
-        property.socialMediaLink || null,
-
-      address:
-        location.address || null,
-
-      city:
-        location.city || null,
-
-      pincode:
-        location.pincode || null,
-
-      latitude:
-        location.latitude !== null &&
-        location.latitude !== undefined
-          ? Number(location.latitude)
-          : null,
-
-      longitude:
-        location.longitude !== null &&
-        location.longitude !== undefined
-          ? Number(location.longitude)
-          : null,
-
-      agent_full_name:
-        contact.fullName || null,
-
-      agent_contact_number:
-        contact.contact || null,
-
-      maha_rera_registered:
-        contact.hasQR === "yes",
-
-      qr_code_number:
-        contact.qrNumber || null,
-
-      qr_code_image_url:
-        contact.qrImage || null,
-    };
-
-    // ========================================================
-    // SAVE TO THE CURRENT ACCOUNT OR THE ISOLATED DEVICE TEST STORE
-
-    const result = await saveProperty(propertyData, { propertyId: editingProperty?.id, propertyType });
-    showSuccessMessage(
-      result.mode === 'guest' ? 'Guest test saved' : 'Success',
-      result.mode === 'guest'
-        ? 'Your test property was saved on this device only. It was not uploaded or assigned to an account.'
-        : `${editingProperty ? 'Property updated' : 'Property added'} successfully!`,
-      () => navigation.navigate('MainTabs', { screen: 'Profile' })
-    );
-
-
-  } catch (error) {
-
-    console.error('ADD PROPERTY ERROR:', error);
-
-    const message = error?.message || 'Failed to add property.';
-    if (Platform.OS === 'web') window.alert(message);
-    else Alert.alert('Error', message);
-
-  } finally {
-
-    setLoading(false);
-
-  }
-};
+      // 3. Database operation succeeded!
+      setSavedResult(result);
+      setShowSuccessModal(true);
+    } catch (error) {
+      console.error('ADD PROPERTY ERROR:', error);
+      if (isNetworkError(error)) {
+        setShowNetworkModal(true);
+      } else {
+        const message = error?.message || 'Failed to add property.';
+        if (Platform.OS === 'web') window.alert(message);
+        else Alert.alert('Error', message);
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // ============================================================
   // STEP INDICATOR
@@ -718,9 +702,9 @@ const handleSubmit = async () => {
             data={
               formData.location
             }
-            onChange={
-              updateLocation
-            }
+            error={locationError}
+            openMapTrigger={openMapTrigger}
+            onChange={updateLocation}
           />
         )}
 
@@ -776,6 +760,65 @@ const handleSubmit = async () => {
           </Text>
         </TouchableOpacity>
       </View>
+    
+      {/* Property Added Confirmation Popup (matching reference designs) */}
+      <PropertyAddedModal
+        visible={showSuccessModal}
+        property={savedResult?.property || {
+          total_amount: (Number(formData.property.totalArea) || 0) * (Number(formData.property.rate) || 0),
+          total_area: formData.property.totalArea,
+          property_type: propertyType,
+          city: formData.location.city,
+          latitude: formData.location.latitude,
+          longitude: formData.location.longitude,
+        }}
+        mode={savedResult?.mode}
+        isEditing={!!editingProperty}
+        onViewListing={() => {
+          setShowSuccessModal(false);
+          const savedId = savedResult?.property?.id;
+          if (savedId) {
+            navigation.navigate('PropertyDetails', {
+              propertyId: String(savedId),
+              source: 'profile',
+            });
+          } else {
+            navigation.navigate('MainTabs', { screen: 'Profile' });
+          }
+        }}
+        onGoToProperties={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('MainTabs', { screen: 'Profile' });
+        }}
+        onClose={() => {
+          setShowSuccessModal(false);
+          navigation.navigate('MainTabs', { screen: 'Profile' });
+        }}
+      />
+
+      {/* No Internet / Connection Lost Popup */}
+      <NetworkErrorModal
+        visible={showNetworkModal}
+        loading={loading}
+        onRetry={() => {
+          setShowNetworkModal(false);
+          void handleSubmit();
+        }}
+        onCancel={() => {
+          setShowNetworkModal(false);
+        }}
+      />
+
+      {/* Map Location Mandatory Validation Modal */}
+      <MapValidationModal
+        visible={showMapValidationModal}
+        onOpenMap={() => {
+          setShowMapValidationModal(false);
+          setStep(2);
+          setOpenMapTrigger((prev) => prev + 1);
+        }}
+        onClose={() => setShowMapValidationModal(false)}
+      />
     </SafeAreaView>
   );
 }

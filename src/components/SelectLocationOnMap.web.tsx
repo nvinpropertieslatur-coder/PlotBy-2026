@@ -3,7 +3,7 @@ import { Modal, Pressable, Text, View, type StyleProp, type TextStyle, type View
 import { LeafletMap } from './LeafletMap.web';
 import { tileProvider, tileProviderSetupMessage } from '../browse/features/map/tileProvider';
 
-type Coordinate = { latitude: number; longitude: number; address?: string; city?: string; pincode?: string };
+type Coordinate = { latitude: number; longitude: number; address?: string; city?: string; pincode?: string; isConfirmed?: boolean };
 type Props = { selectedLocation?: Coordinate | null; onConfirm: (location: Coordinate) => void; buttonStyle?: StyleProp<ViewStyle>; buttonTextStyle?: StyleProp<TextStyle>; showPreview?: boolean };
 const defaultCenter = { latitude: 18.4088, longitude: 76.5604 };
 export default function SelectLocationOnMap({ selectedLocation, onConfirm, buttonStyle, buttonTextStyle, showPreview = true }: Props) {
@@ -14,7 +14,7 @@ export default function SelectLocationOnMap({ selectedLocation, onConfirm, butto
   const markers = useMemo(() => draft ? [{ id: 'location', ...draft, label: 'Selected location' }] : [], [draft]);
   const confirm = () => {
     if (!draft) { setMessage('Click the map to select a location.'); return; }
-    onConfirm(draft); setVisible(false);
+    onConfirm({ ...draft, isConfirmed: true }); setVisible(false);
   };
   const locate = () => navigator.geolocation.getCurrentPosition(position => {
     const point = { latitude: position.coords.latitude, longitude: position.coords.longitude };

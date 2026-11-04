@@ -49,7 +49,7 @@ const CARTO_TILE_URL =
 // MAP HTML
 // --------------------------------------------------
 
-const createMapHtml = (location) => `
+const createMapHtml = (location, hasSelection) => `
 <!DOCTYPE html>
 
 <html>
@@ -111,30 +111,39 @@ const createMapHtml = (location) => `
 
     }).addTo(map);
 
-    // --------------------------------------------------
-    // MARKER
-    // --------------------------------------------------
-
-    const marker = L.marker(
-      [${location.latitude}, ${location.longitude}],
-      {
-        draggable: true
-      }
-    ).addTo(map);
-
-    // --------------------------------------------------
+        // --------------------------------------------------
     // SEND LOCATION TO REACT NATIVE
     // --------------------------------------------------
 
     function sendLocation(latitude, longitude) {
-
       window.ReactNativeWebView.postMessage(
         JSON.stringify({
           latitude,
           longitude
         })
       );
+    }
 
+    // --------------------------------------------------
+    // MARKER
+    // --------------------------------------------------
+
+    let marker = ${hasSelection ? `L.marker(
+      [${location.latitude}, ${location.longitude}],
+      {
+        draggable: true
+      }
+    ).addTo(map)` : 'null'};
+
+    function attachMarkerEvents(m) {
+      m.on("dragend", function (event) {
+        const position = event.target.getLatLng();
+        sendLocation(position.lat, position.lng);
+      });
+    }
+
+    if (marker) {
+      attachMarkerEvents(marker);
     }
 
     // --------------------------------------------------
@@ -142,29 +151,17 @@ const createMapHtml = (location) => `
     // --------------------------------------------------
 
     map.on("click", function (event) {
-
-      marker.setLatLng(event.latlng);
+      if (!marker) {
+        marker = L.marker(event.latlng, { draggable: true }).addTo(map);
+        attachMarkerEvents(marker);
+      } else {
+        marker.setLatLng(event.latlng);
+      }
 
       sendLocation(
         event.latlng.lat,
         event.latlng.lng
       );
-
-    });
-
-    // --------------------------------------------------
-    // DRAG MARKER
-    // --------------------------------------------------
-
-    marker.on("dragend", function (event) {
-
-      const position = event.target.getLatLng();
-
-      sendLocation(
-        position.lat,
-        position.lng
-      );
-
     });
 
   </script>
@@ -184,6 +181,8 @@ export default function SelectLocationOnMap({
   buttonStyle,
   buttonTextStyle,
   showPreview = true,
+  isOpen = false,
+  onClose,
 }) {
 
   const [visible, setVisible] = useState(false);
@@ -195,6 +194,15 @@ export default function SelectLocationOnMap({
   const [loading, setLoading] = useState(false);
 
   const [mapKey, setMapKey] = useState(0);
+  const [hasDraftSelection, setHasDraftSelection] = useState(!!selectedLocation);
+
+  useEffect(() => {
+    if (isOpen) {
+      setDraftLocation(selectedLocation || DEFAULT_LOCATION);
+      setHasDraftSelection(!!selectedLocation);
+      setVisible(true);
+    }
+  }, [isOpen, selectedLocation]);
 
   // --------------------------------------------------
   // UPDATE LOCATION WHEN PROP CHANGES
@@ -207,6 +215,7 @@ export default function SelectLocationOnMap({
       // Keep the existing location picker synchronized with the parent form.
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraftLocation(selectedLocation);
+      setHasDraftSelection(true);
 
     }
 
@@ -217,6 +226,8 @@ export default function SelectLocationOnMap({
   // --------------------------------------------------
 
   const updateMarker = (coordinate) => {
+
+    setHasDraftSelection(true);
 
     setDraftLocation((current) => ({
       ...current,
@@ -263,6 +274,7 @@ export default function SelectLocationOnMap({
         ...previous,
         ...newLocation,
       }));
+      setHasDraftSelection(true);
 
       // Reload WebView so marker moves
       setMapKey((value) => value + 1);
@@ -290,10 +302,9 @@ export default function SelectLocationOnMap({
 
   const confirmLocation = () => {
 
-    if (
-      !draftLocation.latitude ||
-      !draftLocation.longitude
-    ) {
+    const latitude = Number(draftLocation?.latitude);
+    const longitude = Number(draftLocation?.longitude);
+    if (!hasDraftSelection || !Number.isFinite(latitude) || latitude < -90 || latitude > 90 || !Number.isFinite(longitude) || longitude < -180 || longitude > 180) {
 
       Alert.alert(
         "Select Location",
@@ -305,9 +316,11 @@ export default function SelectLocationOnMap({
 
     onConfirm({
 
-      latitude: draftLocation.latitude,
+      latitude,
 
-      longitude: draftLocation.longitude,
+      longitude,
+
+      isConfirmed: true,
 
       // Since we are using CARTO only,
       // we don't automatically get address/city/pincode
@@ -360,6 +373,7 @@ export default function SelectLocationOnMap({
     setDraftLocation(
       selectedLocation || DEFAULT_LOCATION
     );
+    setHasDraftSelection(!!selectedLocation);
 
     setVisible(true);
 
@@ -467,7 +481,7 @@ export default function SelectLocationOnMap({
             key={mapKey}
 
             source={{
-              html: createMapHtml(draftLocation),
+              html: createMapHtml(draftLocation, hasDraftSelection),
             }}
 
             style={styles.map}

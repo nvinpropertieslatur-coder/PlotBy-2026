@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { FlatList, StyleSheet, useWindowDimensions, View } from "react-native";
+import { ActivityIndicator, FlatList, Pressable, StyleSheet, useWindowDimensions, View } from "react-native";
 import * as Haptics from "expo-haptics";
 import { useSharedValue } from "react-native-reanimated";
 import Svg, { Path } from "react-native-svg";
@@ -16,14 +16,25 @@ export function PlotCarousel({
   onSelectPlot,
   onPressPlot,
   maxCardHeight,
+  hasMore = false,
+  loadingMore = false,
+  onLoadMore,
 }: {
   plots: readonly Plot[];
   selectedPlotId?: string;
   onSelectPlot: (id: string) => void;
   onPressPlot: (id: string) => void;
   maxCardHeight?: number;
+  hasMore?: boolean;
+  loadingMore?: boolean;
+  onLoadMore?: () => void;
 }) {
-  const listRef = useRef<FlatList<Plot>>(null);
+  type LoadMoreItem = { id: "__load-more__"; loadMore: true };
+  type WheelItem = Plot | LoadMoreItem;
+  const loadMoreItem: LoadMoreItem = { id: "__load-more__", loadMore: true };
+  const wheelItems: readonly WheelItem[] = hasMore ? [...plots, loadMoreItem] : plots;
+  const isLoadMoreItem = (item: WheelItem): item is LoadMoreItem => "loadMore" in item;
+  const listRef = useRef<FlatList<WheelItem>>(null);
   const userScrolling = useRef(false);
   const lastHapticIndex = useRef<number | null>(null);
   const hapticInFlight = useRef(false);
@@ -93,7 +104,7 @@ export function PlotCarousel({
           </Svg>
           <FlatList
             ref={listRef}
-            data={plots}
+            data={wheelItems}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={{ paddingHorizontal: (width - step) / 2 }}
@@ -108,7 +119,7 @@ export function PlotCarousel({
               lastHapticIndex.current = getCenteredPlotIndex(
                 lastOffset.current,
                 step,
-                plots.length,
+                wheelItems.length,
               );
             }}
             onScrollEndDrag={() => {
@@ -127,11 +138,12 @@ export function PlotCarousel({
                 const centeredIndex = getCenteredPlotIndex(
                   offset,
                   step,
-                  plots.length,
+                  wheelItems.length,
                 );
-                const centeredPlot = plots[centeredIndex];
+                const centeredPlot = wheelItems[centeredIndex];
                 if (
                   centeredPlot &&
+                  !isLoadMoreItem(centeredPlot) &&
                   centeredPlot.id !== lastUserSelection.current
                 ) {
                   lastUserSelection.current = centeredPlot.id;
@@ -152,16 +164,23 @@ export function PlotCarousel({
               if (!userScrolling.current) return;
               userScrolling.current = false;
               const plot =
-                plots[
+                wheelItems[
                   getCenteredPlotIndex(
                     event.nativeEvent.contentOffset.x,
                     step,
-                    plots.length,
+                    wheelItems.length,
                   )
                 ];
-              if (plot && plot.id !== selectedPlotId) onSelectPlot(plot.id);
+              if (plot && !isLoadMoreItem(plot) && plot.id !== selectedPlotId) onSelectPlot(plot.id);
             }}
-            renderItem={({ item, index: itemIndex }) => (
+            renderItem={({ item, index: itemIndex }) => isLoadMoreItem(item) ? (
+              <View style={{ width: step, alignItems: "center" }}>
+                <Pressable accessibilityRole="button" accessibilityLabel="Load more properties" accessibilityState={{ busy: loadingMore, disabled: loadingMore }} disabled={loadingMore} onPress={() => { playHaptic("tap"); onLoadMore?.(); }} style={({ pressed }) => [styles.loadMoreCircle, { width: size, height: size, borderRadius: size / 2 }, pressed && styles.loadMorePressed]}>
+                  {loadingMore ? <ActivityIndicator color="#8CFF32" /> : <AppText style={styles.loadMorePlus}>+</AppText>}
+                </Pressable>
+                <AppText style={styles.loadMoreLabel}>More</AppText>
+              </View>
+            ) : (
               <PlotWheelItem
                 plot={item}
                 index={itemIndex}
@@ -210,4 +229,8 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   wheel: { overflow: "hidden" },
+  loadMoreCircle: { alignItems: "center", justifyContent: "center", backgroundColor: "#101310", borderWidth: 2, borderColor: "#8CFF32", shadowColor: "#8CFF32", shadowOpacity: 0.22, shadowRadius: 7 },
+  loadMorePressed: { transform: [{ scale: 0.94 }], backgroundColor: "#1C2718" },
+  loadMorePlus: { color: "#8CFF32", fontSize: 34, lineHeight: 38, fontWeight: "500" },
+  loadMoreLabel: { color: colors.text, fontSize: 10, marginTop: 3 },
 });

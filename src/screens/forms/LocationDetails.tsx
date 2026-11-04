@@ -18,10 +18,19 @@ import maharashtraCities from "../../data/maharashtra_cities_pincodes.json";
 
 export default function LocationDetailsStep({
   data,
+  error,
   onChange,
+  openMapTrigger,
 }) {
 
   const [showCities, setShowCities] = useState(false);
+  const [isMapOpen, setIsMapOpen] = useState(false);
+
+  React.useEffect(() => {
+    if (openMapTrigger) {
+      setIsMapOpen(true);
+    }
+  }, [openMapTrigger]);
 
   // =========================================================
   // UPDATE LOCATION DATA
@@ -55,7 +64,13 @@ export default function LocationDetailsStep({
   // =========================================================
 
   const handleSelectLocation = (location) => {
-    onChange({ ...data, latitude: location?.latitude ?? null, longitude: location?.longitude ?? null, selectedLocation: location || null });
+    onChange({
+      ...data,
+      latitude: location?.latitude ?? null,
+      longitude: location?.longitude ?? null,
+      selectedLocation: location || null,
+      isConfirmed: Boolean(location?.isConfirmed && location?.latitude != null && location?.longitude != null),
+    });
   };
 
   // =========================================================
@@ -246,10 +261,16 @@ export default function LocationDetailsStep({
         Select Location on Map
       </Text>
 
+      {!!error && (
+        <Text style={{ color: '#FF6B6B', marginBottom: 8, fontWeight: '700' }} accessibilityRole="alert">
+          {error}
+        </Text>
+      )}
+
       <SelectLocationOnMap
         selectedLocation={data.selectedLocation}
         onConfirm={handleSelectLocation}
-        buttonStyle={styles.mapButton}
+        buttonStyle={[styles.mapButton, error ? { borderColor: '#FF6B6B', borderWidth: 1 } : null]}
         buttonTextStyle={styles.mapButtonText}
         showPreview={false}
       />
@@ -258,61 +279,47 @@ export default function LocationDetailsStep({
           SELECTED COORDINATES
       ===================================================== */}
 
-      {data.selectedLocation && (
-        <View
-          style={styles.selectedLocationBox}
-        >
-
-          <View
-            style={
-              styles.selectedLocationHeader
-            }
-          >
-
+      {data.isConfirmed && data.latitude != null && data.longitude != null ? (
+        <View style={styles.selectedLocationBox}>
+          <View style={styles.selectedLocationHeader}>
             <Ionicons
               name="checkmark-circle"
               size={20}
               color="#8CFF32"
             />
-
-            <Text
-              style={
-                styles.selectedLocationTitle
-              }
-            >
-              Location Selected
+            <Text style={styles.selectedLocationTitle}>
+              Location Confirmed on Map
             </Text>
-
+            <View style={{
+              marginLeft: 'auto',
+              backgroundColor: '#1E331E',
+              paddingHorizontal: 8,
+              paddingVertical: 2,
+              borderRadius: 999,
+              borderWidth: 1,
+              borderColor: '#2E552E',
+            }}>
+              <Text style={{ color: '#8CFF32', fontSize: 11, fontWeight: '700' }}>Confirmed</Text>
+            </View>
           </View>
 
-          {data.latitude !== null &&
-            data.latitude !== undefined && (
-              <Text
-                style={
-                  styles.coordinateText
-                }
-              >
-                Latitude:{" "}
-                {Number(
-                  data.latitude
-                ).toFixed(6)}
-              </Text>
-            )}
+          <Text style={styles.coordinateText}>
+            Latitude: {Number(data.latitude).toFixed(6)}
+          </Text>
 
-          {data.longitude !== null &&
-            data.longitude !== undefined && (
-              <Text
-                style={
-                  styles.coordinateText
-                }
-              >
-                Longitude:{" "}
-                {Number(
-                  data.longitude
-                ).toFixed(6)}
-              </Text>
-            )}
+          <Text style={styles.coordinateText}>
+            Longitude: {Number(data.longitude).toFixed(6)}
+          </Text>
 
+          <Text style={{ color: '#8CFF32', fontSize: 12, marginTop: 4 }}>
+            ✓ Exact map coordinates confirmed
+          </Text>
+        </View>
+      ) : (
+        <View style={[styles.selectedLocationBox, { borderColor: '#333833' }]}>
+          <Text style={{ color: '#9CA3AF', fontSize: 13, lineHeight: 18 }}>
+            Map location is mandatory. Tap "Select Location on Map" above to choose and confirm the property pin on Carto map.
+          </Text>
         </View>
       )}
 
