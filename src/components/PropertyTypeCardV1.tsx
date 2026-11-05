@@ -12,13 +12,14 @@ import typographyV1 from '../theme/typography.v1';
 
 const PropertyTypeCardV1 = ({
   title,
-  count,
   icon,
   onPress,
 }) => {
   return (
     <Pressable
       onPress={onPress}
+      accessibilityRole="button"
+      accessibilityLabel={title}
       style={({ pressed }) => [
         styles.card,
         pressed && styles.pressed,
@@ -36,16 +37,6 @@ const PropertyTypeCardV1 = ({
         {title}
       </Text>
 
-      {/* COUNT */}
-      <Text style={styles.count}>
-        {count}{' '}
-        {count === 1 ? 'Property' : 'Properties'}
-      </Text>
-
-      {/* ARROW */}
-      <Text style={styles.arrow}>
-        →
-      </Text>
     </Pressable>
   );
 };
@@ -54,8 +45,6 @@ const styles = StyleSheet.create({
 
   card: {
     width: '48.5%',
-
-    minHeight: 145,
 
     padding: 16,
 
@@ -70,8 +59,6 @@ const styles = StyleSheet.create({
       colorsV1.borderColor,
 
     borderRadius: 20,
-
-    position: 'relative',
   },
 
   iconCircle: {
@@ -104,25 +91,6 @@ const styles = StyleSheet.create({
     color: colorsV1.textPrimary,
 
     ...typographyV1.h3,
-  },
-
-  count: {
-    marginTop: 4,
-
-    color: colorsV1.textSecondary,
-
-    ...typographyV1.caption,
-  },
-
-  arrow: {
-    position: 'absolute',
-
-    right: 16,
-    bottom: 15,
-
-    color: colorsV1.primaryColor,
-
-    fontSize: 20,
   },
 
   pressed: {

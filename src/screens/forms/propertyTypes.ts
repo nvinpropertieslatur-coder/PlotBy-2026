@@ -10,6 +10,16 @@ const propertyTypes = {
     icon: "business-outline",
   },
 
+  apartment: {
+    label: "Apartment",
+    icon: "business-outline",
+  },
+
+  rowhouse: {
+    label: "Row House",
+    icon: "home-outline",
+  },
+
   house: {
     label: "House",
     icon: "home-outline",

@@ -38,6 +38,7 @@ export default function PropertyDetailsScreen({ route, navigation }) {
         agent_contact_number: incomingPlot.contactNumber || incomingPlot.agent_contact_number,
         description: incomingPlot.description,
         status: incomingPlot.status || 'Available',
+        land_details: incomingPlot.landDetails,
       };
     }
     return null;
@@ -153,6 +154,20 @@ export default function PropertyDetailsScreen({ route, navigation }) {
               <Detail label="Rate per sq.ft." value={formatRatePerSqft(record.rate_per_sqft)} />
               <Detail label="Facing" value={facing} />
             </Section>
+            {record.land_details && Object.keys(record.land_details).length > 0 && (
+              <Section title="Land rate and water sources">
+                <Detail label="Land type" value={record.land_details.land_type} />
+                <Detail label="Road access" value={record.land_details.road_type} />
+                <Detail label="Land area" value={`${record.land_details.acres || 0} Acre, ${record.land_details.guntha || 0} Guntha`} />
+                <Detail label="Rate per acre" value={formatPriceInLakhsCrores(record.land_details.rate_per_acre)} />
+                <Detail label="Basic price" value={formatPriceInLakhsCrores(record.land_details.basic_price)} />
+                <Detail label="Discount" value={record.land_details.discount == null ? null : `${record.land_details.discount}%`} />
+                <Detail label="Final land price" value={formatPriceInLakhsCrores(record.land_details.final_price)} />
+                {(record.land_details.water_sources || []).map((source, index) => (
+                  <Detail key={`${source.type}-${index}`} label={source.type} value={source.quantity || 0} />
+                ))}
+              </Section>
+            )}
             <Section title="Location details">
               <Detail label="Address" value={record.address} />
               <Detail label="City" value={record.city} />
@@ -163,6 +178,7 @@ export default function PropertyDetailsScreen({ route, navigation }) {
             <Section title="Additional information">
               <Detail label="RERA registered" value={record.maha_rera_registered == null ? null : record.maha_rera_registered ? 'Yes' : 'No'} />
               <Detail label="Agent / owner" value={record.agent_full_name} />
+              <Detail label="Contact type" value={record.contact_role} />
               <Detail label="Contact" value={record.agent_contact_number} />
               {record.description && <AppText style={styles.description}>{record.description}</AppText>}
             </Section>

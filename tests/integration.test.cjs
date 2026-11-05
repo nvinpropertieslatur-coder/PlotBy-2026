@@ -79,12 +79,12 @@ function clientFixture(user = null, rows = []) {
 function serviceFor(client, store = storeFixture()) {
  return load('src/services/propertyService.js', { '../lib/supabase': { supabase: client }, './propertyAccess': access, './guestPropertyStore': { guestPropertyStore: store, isGuestPropertyId: guestModule.isGuestPropertyId } });
 }
-test('guest startup and empty My Properties make zero property database requests', async () => {
+test('guest startup and empty My Properties stay local while public map locations are readable', async () => {
  const client = clientFixture();
  const service = serviceFor(client);
  assert.deepEqual(await service.getPropertyWorkspace(), { mode: 'guest', userId: null, properties: [] });
  assert.deepEqual(await service.getProperties(), []);
- assert.equal(client.calls.length, 0);
+ assert.deepEqual(client.calls.filter(call => call[0] === 'from').map(call => call[1]), ['public_property_locations']);
 });
 test('guest create, refresh, update, details and delete stay local without another user id', async () => {
  const client = clientFixture(), store = storeFixture(), service = serviceFor(client, store);
@@ -106,14 +106,14 @@ test('guest mode cannot read or mutate a server property even with a known id', 
  await assert.rejects(service.deleteProperty('private-server-id'), error => error.code === 'AUTH_REQUIRED');
  assert.equal(client.calls.length, 0);
 });
-test('signed-in My Properties and map browsing exclude other owners and local test records', async () => {
+test('signed-in My Properties stay owner-filtered while map browsing includes public listings only', async () => {
  const owner = { id: 'verified-owner' }, store = storeFixture();
  await store.saveProperty({ city: 'Latur' });
  const rows = [{ id: 'mine', user_id: owner.id }, { id: 'not-mine', user_id: 'another-user' }];
  const client = clientFixture(owner, rows), service = serviceFor(client, store);
  const workspace = await service.getPropertyWorkspace();
  assert.equal(workspace.mode, 'authenticated'); assert.deepEqual(workspace.properties, [rows[0]]);
- assert.deepEqual(await service.getProperties(), [rows[0]]);
+ assert.deepEqual(await service.getProperties(), rows);
  assert.equal((await service.getPropertyDetails('not-mine')).property, null);
  assert.ok(client.calls.some(call => call[0] === 'filter' && call[1] === service.propertyOwnerColumn && call[3] === owner.id));
  assert.equal((await store.getProperties()).length, 1);

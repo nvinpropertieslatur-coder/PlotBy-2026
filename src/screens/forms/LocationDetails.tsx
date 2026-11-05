@@ -11,6 +11,7 @@ import {
 
 import { Ionicons } from "@expo/vector-icons";
 import SelectLocationOnMap from "../../components/SelectLocationOnMap";
+import LocationMapPreview from "../../components/LocationMapPreview";
 
 import styles from "./addpropertyStyle";
 
@@ -43,6 +44,20 @@ export default function LocationDetailsStep({
     });
   };
 
+  const updateCoordinate = (key, value) => {
+    const latitude = key === "latitude" ? value : data.latitude;
+    const longitude = key === "longitude" ? value : data.longitude;
+    const numericLatitude = Number(latitude);
+    const numericLongitude = Number(longitude);
+    const valid = latitude !== "" && longitude !== "" && Number.isFinite(numericLatitude) && numericLatitude >= -90 && numericLatitude <= 90 && Number.isFinite(numericLongitude) && numericLongitude >= -180 && numericLongitude <= 180;
+    onChange({
+      ...data,
+      [key]: value,
+      selectedLocation: valid ? { latitude: numericLatitude, longitude: numericLongitude, address: data.address, city: data.city, pincode: data.pincode, isConfirmed: true } : null,
+      isConfirmed: valid,
+    });
+  };
+
   // =========================================================
   // CITY SELECTION
   // =========================================================
@@ -66,6 +81,9 @@ export default function LocationDetailsStep({
   const handleSelectLocation = (location) => {
     onChange({
       ...data,
+      address: location?.address || data.address,
+      city: location?.city || data.city,
+      pincode: location?.pincode || data.pincode,
       latitude: location?.latitude ?? null,
       longitude: location?.longitude ?? null,
       selectedLocation: location || null,
@@ -110,6 +128,18 @@ export default function LocationDetailsStep({
           Property Location
         </Text>
 
+      </View>
+
+      <Text style={styles.label}>Coordinates</Text>
+      <View style={styles.areaRow}>
+        <View style={styles.areaInput}>
+          <TextInput style={styles.areaTextInput} placeholder="Latitude" placeholderTextColor="#666" keyboardType="decimal-pad" value={data.latitude == null ? "" : String(data.latitude)} onChangeText={(value) => updateCoordinate("latitude", value.replace(/[^0-9.-]/g, ""))} />
+          <Ionicons name="navigate-outline" size={18} color="#8CFF32" />
+        </View>
+        <View style={styles.areaInput}>
+          <TextInput style={styles.areaTextInput} placeholder="Longitude" placeholderTextColor="#666" keyboardType="decimal-pad" value={data.longitude == null ? "" : String(data.longitude)} onChangeText={(value) => updateCoordinate("longitude", value.replace(/[^0-9.-]/g, ""))} />
+          <Ionicons name="navigate-outline" size={18} color="#8CFF32" />
+        </View>
       </View>
 
       {/* =====================================================
@@ -321,6 +351,14 @@ export default function LocationDetailsStep({
             Map location is mandatory. Tap "Select Location on Map" above to choose and confirm the property pin on Carto map.
           </Text>
         </View>
+      )}
+
+      <Text style={[styles.label, { marginTop: 18 }]}>Land Location Preview</Text>
+      <LocationMapPreview latitude={data.latitude} longitude={data.longitude} />
+      {data.latitude != null && data.longitude != null && data.isConfirmed && (
+        <Text style={{ color: "#9CA3AF", fontSize: 12, marginTop: 8 }}>
+          {Number(data.latitude).toFixed(6)}, {Number(data.longitude).toFixed(6)}
+        </Text>
       )}
 
       <View style={{ height: 30 }} />

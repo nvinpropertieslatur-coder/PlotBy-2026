@@ -32,6 +32,7 @@ import {
 } from '../../components/modals';
 import { isNetworkError } from '../../utils/networkUtils';
 import { saveProperty } from '../../services/propertyService';
+import { calculateLandRate, validateLandRate } from './landRateCalculator';
 
 import styles from "./addpropertyStyle";
 
@@ -129,6 +130,7 @@ export default function AddPropertyScreen() {
       contact: {
         fullName: "",
         contact: "",
+        role: "Owner",
 
         hasQR: "no",
         qrNumber: "",
@@ -138,6 +140,15 @@ export default function AddPropertyScreen() {
         property: {
           length: String(editingProperty.length ?? ''), width: String(editingProperty.width ?? ''),
           totalArea: String(editingProperty.total_area ?? ''), rate: String(editingProperty.rate_per_sqft ?? ''),
+          acres: String(editingProperty.land_details?.acres ?? ''),
+          guntha: String(editingProperty.land_details?.guntha ?? ''),
+          ratePerAcre: String(editingProperty.land_details?.rate_per_acre ?? ''),
+          landDiscount: String(editingProperty.land_details?.discount ?? ''),
+          discountType: editingProperty.land_details?.discount_type || 'fixed',
+          discountValue: String(editingProperty.land_details?.discount_value ?? ''),
+          landType: editingProperty.land_details?.land_type || '',
+          roadType: editingProperty.land_details?.road_type || '',
+          waterSources: editingProperty.land_details?.water_sources || [],
           discount: editingProperty.discount ? 'yes' : 'no', discountRate: editingProperty.discount && Number(editingProperty.total_area) > 0 ? String(Math.max(0, Number(editingProperty.rate_per_sqft) - Number(editingProperty.total_amount) / Number(editingProperty.total_area))) : '', socialMediaLink: editingProperty.social_media_link || '', bhk: '', simpleFacing: '',
           facing: ['East', 'West', 'North', 'South'].map(direction => {
             const entry = (editingProperty.facing || []).find(value => typeof value === 'string' && value.startsWith(direction));
@@ -153,7 +164,7 @@ export default function AddPropertyScreen() {
           selectedLocation: editingProperty.latitude != null && editingProperty.longitude != null ? { latitude: editingProperty.latitude, longitude: editingProperty.longitude, isConfirmed: true } : null,
           isConfirmed: editingProperty.latitude != null && editingProperty.longitude != null,
         },
-        contact: { fullName: editingProperty.agent_full_name || '', contact: editingProperty.agent_contact_number || '', hasQR: editingProperty.maha_rera_registered ? 'yes' : 'no', qrNumber: editingProperty.qr_code_number || '', qrImage: editingProperty.qr_code_image_url || '' },
+        contact: { fullName: editingProperty.agent_full_name || '', contact: editingProperty.agent_contact_number || '', role: editingProperty.contact_role || 'Owner', hasQR: editingProperty.maha_rera_registered ? 'yes' : 'no', qrNumber: editingProperty.qr_code_number || '', qrImage: editingProperty.qr_code_image_url || '' },
       } : {}),
     }));
 
@@ -192,6 +203,18 @@ export default function AddPropertyScreen() {
   const validateProperty = () => {
     const property =
       formData.property;
+
+    if (propertyType === 'agriculturalLand') {
+      const pricingError = validateLandRate({ acres: property.acres, guntha: property.guntha, ratePerAcre: property.ratePerAcre, discount: property.landDiscount, discountType: 'percentage' });
+      if (pricingError) {
+        Alert.alert('Check land price', pricingError);
+        return false;
+      }
+      if ((property.waterSources || []).some((source) => !Number.isInteger(Number(source.quantity)) || Number(source.quantity) < 0)) {
+        Alert.alert('Check water sources', 'Source quantities must be whole numbers and cannot be negative.');
+        return false;
+      }
+    }
 
     if (propertyType === "plot") {
       if (!property.length?.trim()) {
@@ -467,6 +490,7 @@ const handleSubmit = async () => {
       const discountRate =
         property.discount === "yes" ? Number(property.discountRate) || 0 : 0;
       const totalAmount = totalArea * (ratePerSqft - discountRate);
+      const landPricing = propertyType === 'agriculturalLand' ? calculateLandRate({ acres: property.acres, guntha: property.guntha, ratePerAcre: property.ratePerAcre, discount: property.landDiscount, discountType: 'percentage' }) : null;
 
       const selectedFacing = (property.facing || [])
         .filter((item) => item.selected)
@@ -483,7 +507,7 @@ const handleSubmit = async () => {
         total_area: totalArea,
         rate_per_sqft: ratePerSqft,
         discount: property.discount === "yes",
-        total_amount: totalAmount,
+        total_amount: landPricing ? landPricing.finalPrice : totalAmount,
         facing: selectedFacing,
         social_media_link: property.socialMediaLink || null,
         address: location.address || null,
@@ -493,9 +517,25 @@ const handleSubmit = async () => {
         longitude: Number(location.longitude),
         agent_full_name: contact.fullName || null,
         agent_contact_number: contact.contact || null,
+        contact_role: contact.role || 'Owner',
         maha_rera_registered: contact.hasQR === "yes",
         qr_code_number: contact.qrNumber || null,
         qr_code_image_url: contact.qrImage || null,
+        ...(propertyType === 'agriculturalLand' ? {
+          property_type: 'agriculturalLand',
+          land_details: {
+            acres: Number(property.acres) || 0,
+            guntha: Number(property.guntha) || 0,
+            rate_per_acre: Number(property.ratePerAcre) || 0,
+            discount: Number(property.landDiscount) || 0,
+            discount_type: 'percentage',
+            basic_price: landPricing.basicPrice,
+            final_price: landPricing.finalPrice,
+            land_type: property.landType || null,
+            road_type: property.roadType || null,
+            water_sources: (property.waterSources || []).map(({ type, quantity }) => ({ type, quantity: Number(quantity) || 0 })),
+          },
+        } : {}),
       };
 
       // 1. Submit the actual property data to Supabase (or isolated test store)

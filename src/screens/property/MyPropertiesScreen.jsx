@@ -119,31 +119,11 @@ const propertyTypes = [
 
   {
 
-    key: 'flat',
+    key: 'agriculturalLand',
 
-    title: 'Flats',
+    title: 'Sheti',
 
-    icon: '▣',
-
-  },
-
-  {
-
-    key: 'apartment',
-
-    title: 'Apartments',
-
-    icon: '▤',
-
-  },
-
-  {
-
-    key: 'rowhouse',
-
-    title: 'Row Houses',
-
-    icon: '⌂',
+    icon: '♧',
 
   },
 
@@ -156,8 +136,6 @@ const propertyTypes = [
    ========================================================= */
 
 const MyPropertiesScreen = ({
-
-  navigation,
 
   onAddProperty,
 
@@ -233,9 +211,7 @@ const MyPropertiesScreen = ({
 
     useState('all');
 
-  const [activeType, setActiveType] =
-
-    useState('all');
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -285,28 +261,6 @@ const MyPropertiesScreen = ({
 
   /* =======================================================
 
-     PROPERTY COUNTS
-
-     ======================================================= */
-
-  const getTypeCount = (type) => {
-
-    return properties.filter(
-
-      (property) =>
-
-        property &&
-
-        typeof (property.property_type || property.type) === 'string' &&
-
-        (property.property_type || property.type).toLowerCase() === type.toLowerCase()
-
-    ).length;
-
-  };
-
-  /* =======================================================
-
      FILTERED PROPERTIES
 
      ======================================================= */
@@ -330,8 +284,6 @@ const MyPropertiesScreen = ({
 
       const matchesFilter = activeFilter === 'all' || status === activeFilter;
 
-      const matchesType = activeType === 'all' || type === activeType;
-
       const matchesSearch =
 
         !searchText ||
@@ -342,65 +294,11 @@ const MyPropertiesScreen = ({
 
         type.includes(searchText);
 
-      return matchesFilter && matchesType && matchesSearch;
+      return matchesFilter && matchesSearch;
 
     });
 
-  }, [properties, search, activeFilter, activeType]);
-
-  /* =======================================================
-
-     CATEGORY PRESS
-
-     ======================================================= */
-
-  const handleTypePress = (type) => {
-
-    if (activeType === type) {
-
-      setActiveType('all');
-
-      return;
-
-    }
-
-    setActiveType(type);
-
-  };
-
-  /* =======================================================
-
-     NAVIGATION
-
-     ======================================================= */
-
-  const handleAddProperty = () => {
-
-  if (navigation?.navigate) {
-
-    navigation.navigate("AddProperty");
-
-    return;
-
-  }
-
-  if (typeof onAddProperty === "function") {
-
-    onAddProperty();
-
-  } else {
-
-    console.error(
-
-      "Navigation is unavailable. Check the AddProperty screen registration."
-
-    );
-
-  }
-
-};
-
-
+  }, [properties, search, activeFilter]);
 
   /* =======================================================
 
@@ -494,7 +392,7 @@ const MyPropertiesScreen = ({
 
             title="+ Add Property"
 
-            onPress={handleAddProperty}
+            onPress={() => setTypePickerOpen(true)}
 
             style={styles.addButton}
 
@@ -584,66 +482,6 @@ const MyPropertiesScreen = ({
 
         {/* =================================================
 
-            PROPERTY TYPES
-
-            ================================================= */}
-
-        <View style={styles.sectionHeader}>
-
-          <View>
-
-            <Text style={styles.sectionTitle}>
-
-              Property Types
-
-            </Text>
-
-            <Text style={styles.sectionSubtitle}>
-
-              Browse by property category
-
-            </Text>
-
-          </View>
-
-        </View>
-
-        <View style={styles.typeGrid}>
-
-          {propertyTypes.map((item) => {
-
-            const count =
-
-              getTypeCount(item.key);
-
-            return (
-
-              <PropertyTypeCardV1
-
-                key={item.key}
-
-                title={item.title}
-
-                count={count}
-
-                icon={item.icon}
-
-                onPress={() =>
-
-                  handleTypePress(item.key)
-
-                }
-
-              />
-
-            );
-
-          })}
-
-        </View>
-
-        {/* =================================================
-
             SEARCH
 
             ================================================= */}
@@ -719,54 +557,6 @@ const MyPropertiesScreen = ({
           </ScrollView>
 
         </View>
-
-        {/* =================================================
-
-            ACTIVE CATEGORY
-
-            ================================================= */}
-
-        {activeType !== 'all' && (
-
-          <View style={styles.activeCategoryRow}>
-
-            <Text style={styles.activeCategoryText}>
-
-              Showing:{' '}
-
-              {
-
-                propertyTypes.find(
-
-                  (item) =>
-
-                    item.key === activeType
-
-                )?.title
-
-              }
-
-            </Text>
-
-            <Text
-
-              style={styles.clearCategory}
-
-              onPress={() =>
-
-                setActiveType('all')
-
-              }
-
-            >
-
-              Clear
-
-            </Text>
-
-          </View>
-
-        )}
 
         {/* =================================================
 
@@ -879,7 +669,7 @@ const MyPropertiesScreen = ({
 
             <Text style={styles.emptyText}>
 
-              {properties.length === 0 ? 'Add a property to see it here.' : 'Try changing your search, category or filter.'}
+              {properties.length === 0 ? 'Add a property to see it here.' : 'Try changing your search or filter.'}
 
             </Text>
 
@@ -890,6 +680,47 @@ const MyPropertiesScreen = ({
         <View style={styles.bottomSpace} />
 
       </ScrollView>
+
+
+      <Modal
+        visible={typePickerOpen}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setTypePickerOpen(false)}
+      >
+        <SafeAreaView style={styles.typePickerOverlay}>
+          <Pressable
+            style={StyleSheet.absoluteFillObject}
+            onPress={() => setTypePickerOpen(false)}
+            accessible={false}
+          />
+          <View style={styles.typePickerPanel} accessibilityViewIsModal>
+            <Text style={styles.typePickerTitle} accessibilityRole="header">
+              Select Property Type
+            </Text>
+            <ScrollView contentContainerStyle={styles.typeGrid}>
+              {propertyTypes.map((item) => (
+                <PropertyTypeCardV1
+                  key={item.key}
+                  title={item.title}
+                  icon={item.icon}
+                  onPress={() => {
+                    setTypePickerOpen(false);
+                    onAddProperty(item.key);
+                  }}
+                />
+              ))}
+            </ScrollView>
+            <Pressable
+              onPress={() => setTypePickerOpen(false)}
+              style={styles.typePickerCancel}
+              accessibilityRole="button"
+            >
+              <Text style={styles.typePickerCancelLabel}>Cancel</Text>
+            </Pressable>
+          </View>
+        </SafeAreaView>
+      </Modal>
 
 <Modal
   visible={menuOpen}
@@ -1261,35 +1092,37 @@ const styles = StyleSheet.create({
 
   },
 
-  /* SECTION */
-
-  sectionHeader: {
-
-    marginTop: 28,
-
-    marginBottom: 14,
-
+  typePickerOverlay: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.65)',
   },
-
-  sectionTitle: {
-
-    color: colorsV1.textPrimary,
-
+  typePickerPanel: {
+    width: '90%',
+    maxWidth: 440,
+    maxHeight: '90%',
+    padding: 16,
+    borderRadius: 24,
+    backgroundColor: colorsV1.backgroundSecondary,
+  },
+  typePickerTitle: {
     ...typographyV1.h2,
-
+    color: colorsV1.textPrimary,
+    marginBottom: 16,
   },
-
-  sectionSubtitle: {
-
-    marginTop: 3,
-
-    color: colorsV1.textMuted,
-
+  typePickerCancel: {
+    alignSelf: 'flex-end',
+    justifyContent: 'center',
+    minHeight: 44,
+    paddingHorizontal: 12,
+    marginTop: 8,
+  },
+  typePickerCancelLabel: {
     ...typographyV1.caption,
-
+    color: colorsV1.textPrimary,
   },
 
-  /* PROPERTY TYPES */
 
   typeGrid: {
 
@@ -1338,60 +1171,6 @@ const styles = StyleSheet.create({
     gap: 8,
 
     paddingBottom: 2,
-
-  },
-
-  /* ACTIVE CATEGORY */
-
-  activeCategoryRow: {
-
-    marginTop: 16,
-
-    minHeight: 40,
-
-    paddingHorizontal: 14,
-
-    borderRadius: 20,
-
-    flexDirection: 'row',
-
-    alignItems: 'center',
-
-    justifyContent: 'space-between',
-
-    backgroundColor:
-
-      'rgba(124,255,61,0.08)',
-
-    borderWidth: 1,
-
-    borderColor:
-
-      'rgba(124,255,61,0.22)',
-
-  },
-
-  activeCategoryText: {
-
-    color: colorsV1.primaryColor,
-
-    ...typographyV1.caption,
-
-    fontWeight: '600',
-
-  },
-
-  clearCategory: {
-
-    color: colorsV1.textPrimary,
-
-    ...typographyV1.caption,
-
-    fontWeight: '600',
-
-    paddingVertical: 6,
-
-    paddingHorizontal: 8,
 
   },
 

@@ -7,7 +7,6 @@ import {
   TextInput,
   TouchableOpacity,
   ScrollView,
-  Alert,
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
@@ -23,21 +22,6 @@ export default function ContactDetailsStep({
       ...data,
       [key]: value,
     });
-  };
-
-  const handleQRSelection = (value) => {
-    if (value === "no") {
-      onChange({
-        ...data,
-        hasQR: "no",
-        qrNumber: "",
-        qrImage: "",
-      });
-
-      return;
-    }
-
-    update("hasQR", "yes");
   };
 
   return (
@@ -97,76 +81,24 @@ export default function ContactDetailsStep({
         }
       />
 
-      {/* RERA */}
-
-      <Text style={styles.label}>
-        Having MahaRERA QR Code?
-      </Text>
-
-      <View style={styles.radioContainer}>
-        <Radio
-          label="Yes"
-          selected={data.hasQR === "yes"}
-          onPress={() =>
-            handleQRSelection("yes")
-          }
-        />
-
-        <Radio
-          label="No"
-          selected={data.hasQR !== "yes"}
-          onPress={() =>
-            handleQRSelection("no")
-          }
-        />
-      </View>
-
-      {/* QR DETAILS */}
-
-      {data.hasQR === "yes" && (
-        <>
-          <Text style={styles.label}>
-            QR Code Number
-          </Text>
-
-          <TextInput
-            style={styles.input}
-            placeholder="QR Code Number"
-            placeholderTextColor="#666"
-            value={data.qrNumber || ""}
-            onChangeText={(value) =>
-              update("qrNumber", value)
-            }
-          />
-
-          <Text style={styles.label}>
-            Upload QR Code Image
-          </Text>
-
-          <TouchableOpacity
-            style={styles.uploadBox}
-            onPress={() => {
-              Alert.alert(
-                "Upload Image",
-                "Image upload will be connected with Supabase Storage."
-              );
-            }}
-          >
-            <Ionicons
-              name="cloud-upload-outline"
-              size={30}
-              color="#777"
-            />
-
-            <Text
-              style={styles.uploadText}
+      <Text style={styles.label}>Contact Type*</Text>
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10 }}>
+        {["Owner", "Developer", "Agent"].map((role) => {
+          const selected = (data.role || "Owner") === role;
+          return (
+            <TouchableOpacity
+              key={role}
+              onPress={() => update("role", role)}
+              accessibilityRole="radio"
+              accessibilityState={{ selected }}
+              style={{ minWidth: 96, paddingHorizontal: 16, paddingVertical: 12, borderRadius: 18, borderWidth: 1, borderColor: selected ? "#8CFF32" : "#444", backgroundColor: selected ? "rgba(124,255,61,0.12)" : "#151515", flexDirection: "row", alignItems: "center", justifyContent: "center", gap: 8 }}
             >
-              {data.qrImage ||
-                "Upload QR Code Image"}
-            </Text>
-          </TouchableOpacity>
-        </>
-      )}
+              <Ionicons name={role === "Owner" ? "person-outline" : role === "Developer" ? "business-outline" : "briefcase-outline"} size={18} color={selected ? "#8CFF32" : "#aaa"} />
+              <Text style={{ color: selected ? "#8CFF32" : "#fff", fontWeight: selected ? "700" : "500" }}>{role}</Text>
+            </TouchableOpacity>
+          );
+        })}
+      </View>
     </ScrollView>
   );
 }
@@ -175,30 +107,3 @@ export default function ContactDetailsStep({
 // RADIO
 // ============================================================
 
-function Radio({
-  label,
-  selected,
-  onPress,
-}) {
-  return (
-    <TouchableOpacity
-      style={styles.radioItem}
-      onPress={onPress}
-    >
-      <View
-        style={[
-          styles.radio,
-          selected && styles.radioSelected,
-        ]}
-      >
-        {selected && (
-          <View style={styles.radioDot} />
-        )}
-      </View>
-
-      <Text style={styles.radioText}>
-        {label}
-      </Text>
-    </TouchableOpacity>
-  );
-}

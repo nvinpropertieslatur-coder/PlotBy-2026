@@ -21,6 +21,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { getAuthReturnState } from '../../navigation/authReturn';
 import { showSuccessMessage } from '../../utils/showSuccessMessage';
 import { supabase } from '../../lib/supabase';
+import { sendWhatsAppOtp, verifyWhatsAppOtp } from '../../services/whatsappAuthService';
 
 export default function OTPScreen({
   route,
@@ -34,13 +35,14 @@ export default function OTPScreen({
   const mobileNumber =
     route?.params?.mobileNumber || '';
 
+  const channel = route?.params?.channel || 'sms';
+  const isWhatsApp = channel === 'whatsapp';
+
   // =====================================================
-  // OTP STATE - 6 DIGITS
+  // OTP STATE - 4 DIGITS
   // =====================================================
 
   const [otp, setOtp] = useState([
-    '',
-    '',
     '',
     '',
     '',
@@ -52,7 +54,7 @@ export default function OTPScreen({
   // =====================================================
 
   const [timeLeft, setTimeLeft] =
-    useState(24);
+    useState(30);
 
   const [loading, setLoading] =
     useState(false);
@@ -62,8 +64,6 @@ export default function OTPScreen({
   // =====================================================
 
   const inputRefs = [
-    useRef(null),
-    useRef(null),
     useRef(null),
     useRef(null),
     useRef(null),
@@ -126,7 +126,7 @@ export default function OTPScreen({
     // Automatically move to next box
     if (
       number &&
-      index < 5
+      index < 3
     ) {
 
       inputRefs[index + 1]
@@ -171,12 +171,12 @@ export default function OTPScreen({
     // Check OTP length
 
     if (
-      enteredOTP.length !== 6
+      enteredOTP.length !== 4
     ) {
 
       Alert.alert(
         'Invalid OTP',
-        'Please enter the complete 6-digit OTP.'
+        'Please enter the complete 4-digit OTP.'
       );
 
       return;
@@ -195,6 +195,57 @@ export default function OTPScreen({
     try {
 
       setLoading(true);
+
+      // =================================================
+      // WHATSAPP OTP VERIFICATION
+      // =================================================
+
+      if (isWhatsApp) {
+        const result = await verifyWhatsAppOtp(mobileNumber, enteredOTP);
+
+        if (!result.success) {
+          Alert.alert(
+            'Invalid OTP',
+            result.error || 'Incorrect OTP. Please try again.'
+          );
+          return;
+        }
+
+        // Apply session to client Supabase instance if issued
+        if (result.session) {
+          try {
+            await supabase.auth.setSession(result.session);
+          } catch (sessionErr) {
+            console.warn('Set session warning:', sessionErr);
+          }
+        }
+
+        // Sync public.users record
+        if (result.user?.id) {
+          try {
+            await supabase
+              .from('users')
+              .upsert(
+                {
+                  id: result.user.id,
+                  phone: mobileNumber,
+                },
+                {
+                  onConflict: 'id',
+                }
+              );
+          } catch (userErr) {
+            console.warn('Profile table sync warning:', userErr);
+          }
+        }
+
+        showSuccessMessage(
+          'Verification Successful',
+          'You have successfully signed in with WhatsApp!',
+          () => navigation.reset(getAuthReturnState(route?.params?.returnTo, navigation.getState().routes))
+        );
+        return;
+      }
 
 
 
@@ -325,7 +376,29 @@ export default function OTPScreen({
       setLoading(true);
 
       // =================================================
-      // REQUEST NEW OTP
+      // RESEND WHATSAPP OTP
+      // =================================================
+
+      if (isWhatsApp) {
+        const res = await sendWhatsAppOtp(mobileNumber);
+        if (!res.success) {
+          Alert.alert('Error', res.error || 'Unable to resend WhatsApp OTP.');
+          return;
+        }
+
+        setOtp(['', '', '', '']);
+        setTimeLeft(res.cooldownSeconds || 30);
+        setTimeout(() => inputRefs[0].current?.focus(), 100);
+
+        Alert.alert(
+          'OTP Sent',
+          `A new OTP has been sent to your WhatsApp number ${mobileNumber}`
+        );
+        return;
+      }
+
+      // =================================================
+      // REQUEST NEW OTP (SMS)
       // =================================================
 
       const {
@@ -355,8 +428,6 @@ export default function OTPScreen({
       // =================================================
 
       setOtp([
-        '',
-        '',
         '',
         '',
         '',
@@ -474,30 +545,43 @@ export default function OTPScreen({
         ========================================== */}
 
         <Text style={styles.secureText}>
-          SECURE VERIFICATION
+          {isWhatsApp ? 'WHATSAPP VERIFICATION' : 'SECURE VERIFICATION'}
         </Text>
 
         <Text style={styles.title}>
-          Enter your OTP
+          {isWhatsApp ? 'Verify Your Number' : 'Enter your OTP'}
         </Text>
 
         {/* ==========================================
             MOBILE NUMBER
         ========================================== */}
 
-        <Text style={styles.description}>
-
-          A 6-digit code was sent to{' '}
-
-          <Text style={styles.phoneNumber}>
-            {mobileNumber}
+        {isWhatsApp ? (
+          <Text style={styles.description}>
+            Enter the 4-digit OTP sent to your WhatsApp number{'\n'}
+            <Text style={styles.phoneNumber}>{mobileNumber}</Text>
           </Text>
+        ) : (
+          <Text style={styles.description}>
+            A 4-digit code was sent to{' '}
+            <Text style={styles.phoneNumber}>
+              {mobileNumber}
+            </Text>
+            {'\n'}
+            Enter it below to continue.
+          </Text>
+        )}
 
-          {'\n'}
-
-          Enter it below to continue.
-
-        </Text>
+        {/* CHANGE MOBILE NUMBER OPTION */}
+        <TouchableOpacity
+          style={styles.changeNumberButton}
+          onPress={() => navigation.goBack()}
+          activeOpacity={0.7}
+        >
+          <Text style={styles.changeNumberText}>
+            Change mobile number
+          </Text>
+        </TouchableOpacity>
 
         {/* ==========================================
             OTP BOXES
@@ -629,9 +713,7 @@ export default function OTPScreen({
 
             <Text style={styles.verifyText}>
 
-              {loading
-                ? 'Verifying...'
-                : 'Verify and continue'}
+              {loading ? 'Verifying...' : (isWhatsApp ? 'Verify OTP' : 'Verify and continue')}
 
             </Text>
 
@@ -783,6 +865,21 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
 
+  changeNumberButton: {
+    marginTop: 10,
+    alignSelf: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 12,
+  },
+
+  changeNumberText: {
+    color: '#7CFF36',
+    fontSize: 10,
+    fontWeight: '600',
+    textDecorationLine: 'underline',
+  },
+
+
   // ===================================================
   // OTP
   // ===================================================
@@ -800,11 +897,11 @@ const styles = StyleSheet.create({
   },
 
   otpBox: {
-    width: 43,
+    width: 52,
 
-    height: 43,
+    height: 52,
 
-    borderRadius: 7,
+    borderRadius: 10,
 
     borderWidth: 1,
 
@@ -814,13 +911,13 @@ const styles = StyleSheet.create({
 
     color: '#FFFFFF',
 
-    fontSize: 18,
+    fontSize: 22,
 
     fontWeight: '700',
 
     textAlign: 'center',
 
-    marginHorizontal: 3,
+    marginHorizontal: 6,
 
     padding: 0,
   },

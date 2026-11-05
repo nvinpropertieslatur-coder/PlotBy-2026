@@ -12,11 +12,37 @@ import {
   Dimensions,
   StatusBar,
   Image,
+  Alert,
+  ActivityIndicator,
+  ScrollView,
 } from 'react-native';
+import Svg, { Path } from 'react-native-svg';
 
 import { supabase } from '../../lib/supabase';
+import { sendWhatsAppOtp } from '../../services/whatsappAuthService';
 
 const { width, height } = Dimensions.get('window');
+
+
+// =====================================================
+// WHATSAPP LOGO
+// =====================================================
+
+function WhatsAppLogo({ size = 20, color = "#071006" }) {
+  return (
+    <Svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <Path
+        fill={color}
+        d="M12.04 2C6.58 2 2.13 6.45 2.13 11.91C2.13 13.66 2.59 15.36 3.45 16.86L2.05 22L7.3 20.62C8.75 21.41 10.38 21.83 12.04 21.83C17.5 21.83 21.95 17.38 21.95 11.92C21.95 9.27 20.92 6.78 19.05 4.91C17.18 3.04 14.69 2 12.04 2Z"
+      />
+      <Path
+        fill="#24e412"
+        d="M17.52 14.33C17.22 14.18 15.75 13.45 15.47 13.35C15.2 13.25 15 13.2 14.81 13.5C14.61 13.8 14.04 14.47 13.87 14.67C13.7 14.87 13.52 14.89 13.22 14.74C12.92 14.59 11.96 14.28 10.83 13.27C9.94 12.48 9.35 11.51 9.17 11.21C9 10.91 9.15 10.75 9.3 10.6C9.43 10.47 9.6 10.25 9.75 10.08C9.9 9.9 9.95 9.77 10.05 9.57C10.15 9.37 10.1 9.2 10.02 9.05C9.95 8.9 9.37 7.48 9.13 6.9C8.9 6.34 8.67 6.41 8.5 6.41C8.33 6.4 8.14 6.4 7.94 6.4C7.74 6.4 7.42 6.47 7.15 6.77C6.88 7.07 6.11 7.79 6.11 9.26C6.11 10.73 7.18 12.15 7.33 12.35C7.48 12.55 9.43 15.55 12.41 16.84C13.12 17.15 13.68 17.33 14.11 17.47C14.82 17.7 15.47 17.67 15.98 17.59C16.55 17.5 17.74 16.87 17.99 16.17C18.24 15.47 18.24 14.87 18.16 14.74C18.09 14.62 17.82 14.48 17.52 14.33Z"
+      />
+    </Svg>
+  );
+}
+
 
 // =====================================================
 // COUNTRIES
@@ -123,6 +149,8 @@ export default function SignInScreen({ navigation, route }) {
     useState(0);
 
   const [loading, setLoading] = useState(false);
+  const [loginMethod, setLoginMethod] = useState('whatsapp');
+  const [whatsAppLoading, setWhatsAppLoading] = useState(false);
 
   const carouselRef = useRef(null);
 
@@ -209,6 +237,7 @@ export default function SignInScreen({ navigation, route }) {
       // Navigate to OTP screen
       navigation.navigate('OTP', {
         mobileNumber: fullNumber,
+        channel: 'sms',
         returnTo: route?.params?.returnTo,
       });
 
@@ -226,6 +255,52 @@ export default function SignInScreen({ navigation, route }) {
       setLoading(false);
     }
   };
+
+
+  // ===================================================
+  // WHATSAPP SIGN IN + SEND OTP
+  // ===================================================
+
+  const handleWhatsAppSignIn = async () => {
+    if (mobile.length !== selectedCountry.digits) {
+      Alert.alert(
+        'Invalid Mobile Number',
+        `Please enter a valid ${selectedCountry.digits}-digit mobile number.`
+      );
+      return;
+    }
+
+    const fullNumber = selectedCountry.code + mobile;
+
+    try {
+      setWhatsAppLoading(true);
+      console.log('Sending WhatsApp OTP to:', fullNumber);
+
+      const res = await sendWhatsAppOtp(fullNumber);
+
+      if (!res.success) {
+        Alert.alert('Unable to Send OTP', res.error || 'Failed to send WhatsApp OTP.');
+        return;
+      }
+
+      console.log('WhatsApp OTP sent successfully');
+
+      // Navigate to OTP screen with channel: 'whatsapp'
+      navigation.navigate('OTP', {
+        mobileNumber: fullNumber,
+        channel: 'whatsapp',
+        returnTo: route?.params?.returnTo,
+      });
+
+    } catch (err) {
+      console.error('Unexpected WhatsApp OTP error:', err);
+      Alert.alert('Error', 'Something went wrong while sending WhatsApp OTP. Please try again.');
+    } finally {
+      setWhatsAppLoading(false);
+    }
+  };
+
+  
 
   // ===================================================
   // CAROUSEL SCROLL
@@ -349,6 +424,42 @@ export default function SignInScreen({ navigation, route }) {
       ================================================= */}
 
       <View style={styles.bottomSection}>
+        <ScrollView
+          showsVerticalScrollIndicator={false}
+          bounces={false}
+          contentContainerStyle={styles.bottomScrollContent}
+          keyboardShouldPersistTaps="handled"
+        >
+
+
+        {/* LOGIN METHOD SELECTOR */}
+        <View style={styles.methodTabs}>
+          <TouchableOpacity
+            style={[styles.methodTab, loginMethod === 'whatsapp' && styles.methodTabActive]}
+            onPress={() => setLoginMethod('whatsapp')}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityLabel="WhatsApp Login"
+          >
+            <WhatsAppLogo size={16} />
+            <Text style={[styles.methodTabText, loginMethod === 'whatsapp' && styles.methodTabTextActive]}>
+              WhatsApp
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.methodTab, loginMethod === 'sms' && styles.methodTabActive]}
+            onPress={() => setLoginMethod('sms')}
+            activeOpacity={0.8}
+            accessibilityRole="tab"
+            accessibilityLabel="Mobile SMS Login"
+          >
+            <Text style={[styles.smsTabIcon, loginMethod === 'sms' && styles.smsTabIconActive]}>💬</Text>
+            <Text style={[styles.methodTabText, loginMethod === 'sms' && styles.methodTabTextActive]}>
+              Mobile SMS
+            </Text>
+          </TouchableOpacity>
+        </View>
 
         {/* TITLE */}
 
@@ -478,37 +589,58 @@ export default function SignInScreen({ navigation, route }) {
         </TouchableOpacity>
 
         {/* =================================================
-            SIGN IN BUTTON
+            PRIMARY ACTION BUTTON (WHATSAPP OR SMS)
         ================================================= */}
 
-        <TouchableOpacity
-          style={[
-            styles.signInButton,
-
-            mobile.length ===
-              selectedCountry.digits
-              ? styles.signInActive
-              : styles.signInDisabled,
-          ]}
-          onPress={handleSignIn}
-          activeOpacity={0.8}
-          disabled={loading}
-        >
-
-          <Text style={styles.signInText}>
-            {loading
-              ? 'Sending OTP...'
-              : 'Sign In'}
-          </Text>
-
-          {!loading && (
-            <Text style={styles.arrowRight}>
-              →
+        {loginMethod === 'whatsapp' ? (
+          <TouchableOpacity
+            style={[
+              styles.whatsAppButton,
+              mobile.length === selectedCountry.digits
+                ? styles.whatsAppActive
+                : styles.whatsAppDisabled,
+            ]}
+            onPress={handleWhatsAppSignIn}
+            activeOpacity={0.8}
+            disabled={whatsAppLoading}
+            accessibilityRole="button"
+            accessibilityLabel="Continue with WhatsApp"
+          >
+            {whatsAppLoading ? (
+              <ActivityIndicator color="#071006" size="small" />
+            ) : (
+              <>
+                <WhatsAppLogo size={20} />
+                <Text style={styles.whatsAppText}>
+                  Continue with WhatsApp
+                </Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            style={[
+              styles.signInButton,
+              mobile.length === selectedCountry.digits
+                ? styles.signInActive
+                : styles.signInDisabled,
+            ]}
+            onPress={handleSignIn}
+            activeOpacity={0.8}
+            disabled={loading}
+            accessibilityRole="button"
+            accessibilityLabel="Sign in with SMS"
+          >
+            <Text style={styles.signInText}>
+              {loading ? 'Sending OTP...' : 'Sign In with SMS'}
             </Text>
-          )}
+            {!loading && <Text style={styles.arrowRight}>→</Text>}
+          </TouchableOpacity>
+        )}
 
-        </TouchableOpacity>
 
+
+        
         {/* =================================================
             TERMS
         ================================================= */}
@@ -533,6 +665,7 @@ export default function SignInScreen({ navigation, route }) {
 
         </View>
 
+        </ScrollView>
       </View>
 
       {/* =================================================
@@ -726,6 +859,83 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
 
     paddingTop: 14,
+  },
+  bottomScrollContent: {
+    paddingBottom: 20,
+  },
+
+  methodTabs: {
+    flexDirection: 'row',
+    backgroundColor: '#0C100E',
+    borderRadius: 12,
+    padding: 3,
+    marginBottom: 14,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.08)',
+  },
+
+  methodTab: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+    gap: 6,
+  },
+
+  methodTabActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.12)',
+  },
+
+  methodTabText: {
+    color: '#8E9AA8',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+
+  methodTabTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
+  },
+
+  smsTabIcon: {
+    fontSize: 12,
+    opacity: 0.6,
+  },
+
+  smsTabIconActive: {
+    opacity: 1,
+  },
+
+  whatsAppButton: {
+    height: 48,
+    borderRadius: 14,
+    marginTop: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 10,
+    elevation: 2,
+    shadowColor: '#24e412',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+  },
+
+  whatsAppActive: {
+    backgroundColor: '#24e412',
+  },
+
+  whatsAppDisabled: {
+    backgroundColor: '#24e412',
+    opacity: 0.5,
+  },
+
+  whatsAppText: {
+    color: '#071006',
+    fontSize: 16,
+    fontWeight: '700',
   },
 
   loginTitle: {

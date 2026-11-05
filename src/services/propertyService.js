@@ -44,11 +44,12 @@ export async function getPropertyWorkspace() {
 }
 export async function getMyProperties() { return (await getPropertyWorkspace()).properties; }
 
-// Geographic browsing stays within the authenticated workspace. RLS remains the
-// authority; the client only removes records that must never become map markers
-// (archived/deleted/inactive/draft rows and invalid coordinates are handled by the adapter).
+// Map browsing reads the public, location-only projection. Property management
+// continues to use the owner-filtered properties table above.
 export async function getProperties() {
-  const rows = await getMyProperties();
+  const { data, error } = await supabase.from('public_property_locations').select('*');
+  if (error) throw error;
+  const rows = data || [];
   return rows.filter((row) => {
     const status = typeof row.status === 'string' ? row.status.toLowerCase() : '';
     const deleted = row.deleted === true || row.is_deleted === true || row.archived === true || row.is_archived === true;

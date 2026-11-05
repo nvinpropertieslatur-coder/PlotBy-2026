@@ -5,9 +5,11 @@ import {
   ActivityIndicator,
   Alert,
   Modal,
+  Platform,
   Pressable,
   StyleSheet,
   Text,
+  TextInput,
   View,
 } from "react-native";
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -192,12 +194,17 @@ export default function SelectLocationOnMap({
   );
 
   const [loading, setLoading] = useState(false);
+  const [searchText, setSearchText] = useState("");
+  const [searchingAddress, setSearchingAddress] = useState(false);
+  const [searchMessage, setSearchMessage] = useState("");
 
   const [mapKey, setMapKey] = useState(0);
   const [hasDraftSelection, setHasDraftSelection] = useState(!!selectedLocation);
 
   useEffect(() => {
     if (isOpen) {
+      // This effect synchronizes the externally triggered map modal with its draft selection.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setDraftLocation(selectedLocation || DEFAULT_LOCATION);
       setHasDraftSelection(!!selectedLocation);
       setVisible(true);
@@ -235,6 +242,36 @@ export default function SelectLocationOnMap({
       longitude: coordinate.longitude,
     }));
 
+  };
+
+  const searchAddress = async () => {
+    const address = searchText.trim();
+    if (!address || searchingAddress) return;
+    setSearchingAddress(true);
+    setSearchMessage("");
+    try {
+      if (Platform.OS === "android") {
+        const permission = await Location.requestForegroundPermissionsAsync();
+        if (permission.status !== "granted") {
+          setSearchMessage("Allow location access to search for this address.");
+          return;
+        }
+      }
+      const geocodeQuery = /india/i.test(address) ? address : `${address}, India`;
+      const results = await Location.geocodeAsync(geocodeQuery);
+      const result = results[0];
+      if (!result) {
+        setSearchMessage("No matching location found. Try adding the town or city.");
+        return;
+      }
+      setDraftLocation({ latitude: result.latitude, longitude: result.longitude, address });
+      setHasDraftSelection(true);
+      setMapKey((value) => value + 1);
+    } catch {
+      setSearchMessage("Could not find that address. Try a nearby town or landmark.");
+    } finally {
+      setSearchingAddress(false);
+    }
   };
 
   // --------------------------------------------------
@@ -373,6 +410,8 @@ export default function SelectLocationOnMap({
     setDraftLocation(
       selectedLocation || DEFAULT_LOCATION
     );
+    setSearchText(selectedLocation?.address || "");
+    setSearchMessage("");
     setHasDraftSelection(!!selectedLocation);
 
     setVisible(true);
@@ -472,6 +511,23 @@ export default function SelectLocationOnMap({
             </Text>
 
           </View>
+
+          <View style={styles.searchContainer}>
+            <TextInput
+              value={searchText}
+              onChangeText={setSearchText}
+              placeholder="Search address, town, or landmark"
+              placeholderTextColor="#888"
+              returnKeyType="search"
+              onSubmitEditing={searchAddress}
+              style={styles.searchInput}
+              accessibilityLabel="Search for a land address"
+            />
+            <Pressable style={styles.searchButton} onPress={searchAddress} disabled={searchingAddress} accessibilityRole="button">
+              {searchingAddress ? <ActivityIndicator size="small" color="#000" /> : <Ionicons name="search" size={20} color="#000" />}
+            </Pressable>
+          </View>
+          {!!searchMessage && <Text style={styles.searchMessage}>{searchMessage}</Text>}
 
           {/* ----------------------------------------
               CARTO MAP
@@ -595,6 +651,42 @@ const styles = StyleSheet.create({
     fontWeight: "700",
   },
 
+  searchContainer: {
+    marginHorizontal: 16,
+    marginBottom: 10,
+    minHeight: 50,
+    flexDirection: "row",
+    alignItems: "center",
+    backgroundColor: "#171a18",
+    borderColor: "#3b453d",
+    borderWidth: 1,
+    borderRadius: 14,
+  },
+
+  searchInput: {
+    flex: 1,
+    minHeight: 48,
+    color: "#fff",
+    paddingHorizontal: 14,
+  },
+
+  searchButton: {
+    width: 44,
+    height: 42,
+    marginRight: 4,
+    borderRadius: 12,
+    backgroundColor: "#8CFF32",
+    alignItems: "center",
+    justifyContent: "center",
+  },
+
+  searchMessage: {
+    color: "#FFB84D",
+    marginHorizontal: 18,
+    marginBottom: 8,
+    fontSize: 12,
+  },
+
   map: {
     flex: 1,
   },
@@ -602,7 +694,7 @@ const styles = StyleSheet.create({
   myLocation: {
     position: "absolute",
     right: 16,
-    top: 130,
+    top: 184,
 
     flexDirection: "row",
     alignItems: "center",

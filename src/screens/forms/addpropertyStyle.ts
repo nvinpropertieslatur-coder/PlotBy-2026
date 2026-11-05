@@ -448,6 +448,43 @@ propertyTypeText: {
     fontWeight: "600",
   },
 
+  selectedLocationBox: {
+    width: "100%",
+    alignSelf: "stretch",
+    marginTop: 12,
+    padding: 14,
+    borderRadius: 14,
+    backgroundColor: "#151a16",
+    borderWidth: 1,
+    borderColor: "#2E552E",
+    overflow: "hidden",
+  },
+
+  selectedLocationHeader: {
+    width: "100%",
+    flexDirection: "row",
+    alignItems: "center",
+    flexWrap: "wrap",
+    gap: 8,
+    marginBottom: 8,
+  },
+
+  selectedLocationTitle: {
+    flex: 1,
+    flexShrink: 1,
+    color: "#fff",
+    fontSize: 14,
+    fontWeight: "700",
+  },
+
+  coordinateText: {
+    width: "100%",
+    color: "#B8BDB9",
+    fontSize: 13,
+    lineHeight: 20,
+    marginTop: 2,
+  },
+
   // ============================================================
   // UPLOAD
   // ============================================================

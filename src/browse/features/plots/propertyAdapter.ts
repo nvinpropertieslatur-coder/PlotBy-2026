@@ -20,5 +20,6 @@ export function propertyToPlot(record: PropertyRecord): Plot | null {
  verified: record.verified === true || record.approved === true || record.status === 'verified',
  reraRegistered: record.maha_rera_registered === true,
  propertyType: text(record.property_type) || text(record.type) || 'Property',
+ landDetails: record.land_details && typeof record.land_details === 'object' ? record.land_details as Record<string, unknown> : undefined,
  status: status === 'active' || status === 'sold' || status === 'inactive' || status === 'draft' ? status : undefined };
 }

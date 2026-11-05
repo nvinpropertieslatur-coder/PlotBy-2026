@@ -1,5 +1,5 @@
 // @ts-nocheck
-import React, { useMemo, useState } from "react";
+import React, { useState } from "react";
 
 import {
   View,
@@ -12,6 +12,7 @@ import {
 import { Ionicons } from "@expo/vector-icons";
 
 import styles from "./addpropertyStyle";
+import { calculateLandRate } from "./landRateCalculator";
 
 export default function PropertyDetailsStep({
   propertyType = "plot",
@@ -30,6 +31,85 @@ export default function PropertyDetailsStep({
       [key]: value,
     });
   };
+
+  if (propertyType === "agriculturalLand") {
+    const pricing = calculateLandRate({ acres: data.acres, guntha: data.gunta, ratePerAcre: data.ratePerAcre, discount: data.landDiscount, discountType: "percentage" });
+    const choices = (key, values) => (
+      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
+        {values.map((value) => (
+          <TouchableOpacity key={value} onPress={() => update(key, key === "discountType" ? value : data[key] === value ? "" : value)} style={{ paddingHorizontal: 16, paddingVertical: 11, borderRadius: 18, borderWidth: 1, borderColor: (data[key] || (key === "discountType" ? "fixed" : "")) === value ? "#8CFF32" : "#444", backgroundColor: (data[key] || (key === "discountType" ? "fixed" : "")) === value ? "#26351C" : "#151515" }}>
+            <Ionicons name={key === "landType" ? (value === "Kali" ? "leaf-outline" : "sunny-outline") : "trail-sign-outline"} size={18} color="#8CFF32" />
+            <Text style={{ color: "#fff" }}>{value}</Text>
+          </TouchableOpacity>
+        ))}
+      </View>
+    );
+    const field = (label, key, placeholder, numeric = false) => (
+      <>
+        <Text style={styles.label}>{label}</Text>
+        <TextInput style={styles.input} placeholder={placeholder} placeholderTextColor="#777" keyboardType={numeric ? "decimal-pad" : "default"} value={data[key] || ""} onChangeText={(value) => update(key, value)} />
+      </>
+    );
+
+    return (
+      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+        <View style={styles.sectionHeader}><View style={styles.sectionIcon}><Ionicons name="leaf-outline" size={20} color="#000" /></View><Text style={styles.sectionTitle}>Sheti Details</Text></View>
+        <Text style={styles.label}>Road Access</Text>
+        {choices("roadType", ["Samaik", "Kachha Road", "Dambari"])}
+        <Text style={styles.label}>Land Area</Text>
+        <View style={styles.areaRow}>
+          <View style={styles.areaInput}><TextInput style={styles.areaTextInput} placeholder="Acres" placeholderTextColor="#666" keyboardType="decimal-pad" value={data.acres || ""} onChangeText={(value) => update("acres", value.replace(/[^0-9.]/g, ""))} /><Text style={styles.ft}>acre</Text></View>
+          <View style={styles.areaInput}><TextInput style={styles.areaTextInput} placeholder="Guntha" placeholderTextColor="#666" keyboardType="decimal-pad" value={data.gunta || ""} onChangeText={(value) => update("gunta", value.replace(/[^0-9.]/g, ""))} /><Text style={styles.ft}>guntha</Text></View>
+        </View>
+        {field("Rate per acre", "ratePerAcre", "Enter rate per acre", true)}
+        <View style={{ padding: 16, marginTop: 8, borderRadius: 16, backgroundColor: "#191f1b", borderWidth: 1, borderColor: "#38443b" }}>
+          <Text style={{ color: "#aaa", fontSize: 14 }}>Total Rate</Text>
+          <Text style={{ color: "#8CFF32", fontSize: 22, fontWeight: "800", marginTop: 6 }}>₹ {pricing.basicPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</Text>
+        </View>
+        {field("Discount (%)", "landDiscount", "Enter discount percentage", true)}
+        <View style={{ padding: 16, marginBottom: 20, borderRadius: 16, backgroundColor: "#191f1b", borderWidth: 1, borderColor: "#38443b" }}>
+          <Text style={{ color: "#aaa", fontSize: 14 }}>Calculated Rate After Discount</Text>
+          <Text style={{ color: "#8CFF32", fontSize: 22, fontWeight: "800", marginTop: 6 }}>₹ {pricing.finalPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</Text>
+        </View>
+        <Text style={styles.label}>Jamin Type</Text>
+        {choices("landType", ["Kali", "Malran"])}
+        <Text style={styles.sectionTitle}>Water Sources</Text>
+        {[
+          ["Borewell (Bor)", "water-outline"], ["Well (Vihir)", "ellipse-outline"], ["Canal", "git-branch-outline"],
+        ].map(([label, icon]) => {
+          const sources = data.waterSources || [];
+          const index = sources.findIndex((source) => source.type === label);
+          const selected = index >= 0;
+          const source = selected ? sources[index] : null;
+          const updateSource = (patch) => update("waterSources", sources.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
+          return (
+            <View key={label} style={{ marginTop: 10 }}>
+              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
+                <TouchableOpacity onPress={() => update("waterSources", selected ? sources.filter((item) => item.type !== label) : [...sources, { type: label, quantity: "1" }])} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} style={{ width: 30, height: 40, alignItems: "center", justifyContent: "center" }}>
+                  <Ionicons name={selected ? "checkbox" : "square-outline"} size={23} color={selected ? "#8CFF32" : "#aaa"} />
+                </TouchableOpacity>
+                <View style={{ flex: 1, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: selected ? "#8CFF32" : "#444", paddingLeft: 14, paddingRight: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
+                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}><Ionicons name={icon} size={18} color={selected ? "#8CFF32" : "#aaa"} /><Text style={{ color: "#fff" }}>{label}</Text></View>
+                  {selected && (
+                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
+                      <TouchableOpacity onPress={() => updateSource({ quantity: String(Math.max(1, (Number(source.quantity) || 1) - 1)) })} accessibilityRole="button" accessibilityLabel={`Decrease ${label} quantity`} style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="remove" size={20} color="#8CFF32" />
+                      </TouchableOpacity>
+                      <Text style={{ color: "#fff", minWidth: 18, textAlign: "center", fontWeight: "700" }}>{Number(source.quantity) || 1}</Text>
+                      <TouchableOpacity onPress={() => updateSource({ quantity: String((Number(source.quantity) || 1) + 1) })} accessibilityRole="button" accessibilityLabel={`Increase ${label} quantity`} style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" }}>
+                        <Ionicons name="add" size={20} color="#8CFF32" />
+                      </TouchableOpacity>
+                    </View>
+                  )}
+                  {!selected && <Ionicons name="chevron-down" size={18} color="#8CFF32" />}
+                </View>
+              </View>
+            </View>
+          );
+        })}
+      </ScrollView>
+    );
+  }
 
   // ============================================================
   // LENGTH
@@ -92,9 +172,7 @@ export default function PropertyDetailsStep({
   // TOTAL AMOUNT
   // ============================================================
 
-  const totalRate = useMemo(() => {
-    return totalArea * (rate - discountRate);
-  }, [totalArea, rate, discountRate]);
+  const totalRate = totalArea * (rate - discountRate);
 
   // ============================================================
   // FORMAT INDIAN AMOUNT
