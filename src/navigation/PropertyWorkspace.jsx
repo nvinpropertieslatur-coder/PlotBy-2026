@@ -4,7 +4,7 @@ import { supabase } from '../lib/supabase';
 
 /** The sole My Properties screen is the Profile tab, retaining its original menu. */
 export default function PropertyWorkspace({ navigation }) {
-  return <MyPropertiesScreen navigation={navigation} profileImage={undefined}
+  return <MyPropertiesScreen navigation={navigation}
     onBack={() => navigation.navigate('Property')}
     onProfilePress={() => navigation.navigate('Profile')}
     onEditProfile={() => navigation.navigate('EditProfile')}
@@ -12,14 +12,14 @@ export default function PropertyWorkspace({ navigation }) {
     onAddProperty={() => navigation.navigate('AddProperty')}
     onPropertyPress={property => navigation.navigate('PropertyDetails', { propertyId: String(property.id), source: 'profile' })}
     onEditProperty={property => navigation.navigate('AddProperty', { property, propertyType: property.type || 'plot' })}
-    onSignIn={() => navigation.navigate('SignIn', { returnTo: 'MyProperties' })}
-    onAgentLogin={() => navigation.navigate('SignIn')}
-    onBuilderLogin={() => navigation.navigate('SignIn')}
     onSavedProperties={() => navigation.navigate('SavedPlots')}
     onHelp={() => navigation.navigate('Help')}
     onLogout={async () => {
+      const { data: { session }, error: sessionError } = await supabase.auth.getSession();
+      if (sessionError) { Alert.alert('Sign out failed', sessionError.message); return; }
+      if (!session) { navigation.navigate('SignIn'); return; }
       const { error } = await supabase.auth.signOut();
       if (error) Alert.alert('Sign out failed', error.message);
-      // Stay in the workspace. An auth event clears private rows and loads guest data.
+      else navigation.navigate('SignIn');
     }} />;
 }

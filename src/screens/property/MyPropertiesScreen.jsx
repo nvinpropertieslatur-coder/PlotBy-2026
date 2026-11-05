@@ -41,7 +41,7 @@ import PropertyTypeCardV1 from '../../components/PropertyTypeCardV1';
 
 import GlassCardV1 from '../../components/GlassCardV1';
 
-import ProfileAvatarV1 from '../../components/ProfileAvatarV1';
+import { Menu } from 'lucide-react-native';
 
 import ScreenHeaderV1 from '../../components/ScreenHeaderV1';
 import { NetworkErrorModal } from '../../components/modals';
@@ -62,8 +62,6 @@ import { isNetworkError } from '../../utils/networkUtils';
    ========================================================= */
 
 const filters = [
-  { key: 'active', label: 'Active' },
-  { key: 'pending', label: 'Pending' },
 
   {
 
@@ -169,23 +167,15 @@ const MyPropertiesScreen = ({
 
   onProfilePress,
 
-  profileImage,
-
   onEditProfile,
 
   onSubscription,
-
-  onAgentLogin,
-
-  onBuilderLogin,
 
   onSavedProperties,
 
   onHelp,
 
   onLogout,
-
-  onSignIn,
 
 }) => {
 
@@ -228,10 +218,12 @@ const MyPropertiesScreen = ({
   }, [reloadToken]));
 
   const [search, setSearch] = useState('');
+  const noProperties = properties.length === 0;
 
   const [activeFilter, setActiveFilter] =
 
     useState('all');
+  const selectedFilterLabel = filters.find(filter => filter.key === activeFilter)?.label.toLowerCase();
 
   const [activeType, setActiveType] =
 
@@ -328,7 +320,10 @@ const MyPropertiesScreen = ({
 
       const location = [property.location, property.address, property.city].filter(value => typeof value === 'string').join(' ').toLowerCase();
 
-      const matchesFilter = activeFilter === 'all' || status === activeFilter;
+      const area = property.total_area == null ? '' : `${property.total_area} sq.ft.`.toLowerCase();
+      const isUnverified = ['pending', 'pending_verification', 'rejected', 'unverified'].includes(status);
+      const matchesFilter = activeFilter === 'all' || status === activeFilter ||
+        (activeFilter === 'unverified' && isUnverified);
 
       const matchesType = activeType === 'all' || type === activeType;
 
@@ -339,6 +334,8 @@ const MyPropertiesScreen = ({
         title.includes(searchText) ||
 
         location.includes(searchText) ||
+
+        area.includes(searchText) ||
 
         type.includes(searchText);
 
@@ -450,13 +447,7 @@ const MyPropertiesScreen = ({
 
         rightElement={
 
-          <ProfileAvatarV1
-
-            size={42}
-
-            imageUri={profileImage}
-
-          />
+          <Menu size={24} color={colorsV1.primaryColor} />
 
         }
 
@@ -648,22 +639,6 @@ const MyPropertiesScreen = ({
 
             ================================================= */}
 
-        <View style={styles.searchSection}>
-
-          <SearchBarV1
-
-            value={search}
-
-            onChangeText={setSearch}
-
-            placeholder="Search properties or location..."
-
-            showFilter={false}
-
-          />
-
-        </View>
-
         {/* =================================================
 
             FILTERS
@@ -800,6 +775,22 @@ const MyPropertiesScreen = ({
 
         </View>
 
+        <View style={styles.searchSection}>
+
+          <SearchBarV1
+
+            value={search}
+
+            onChangeText={setSearch}
+
+            placeholder="Search title, location or area..."
+
+            showFilter={false}
+
+          />
+
+        </View>
+
         {/* =================================================
 
             PROPERTY CARDS
@@ -873,15 +864,25 @@ const MyPropertiesScreen = ({
 
             <Text style={styles.emptyTitle}>
 
-              {properties.length === 0 ? 'No properties added yet' : 'No properties found'}
+              {noProperties
+                ? workspaceMode === 'authenticated' ? "You haven't added any property yet." : 'No properties added yet'
+                : search.trim() ? 'No matching properties'
+                  : activeFilter === 'all' ? 'No properties in this category' : `No ${selectedFilterLabel} properties`}
 
             </Text>
 
             <Text style={styles.emptyText}>
 
-              {properties.length === 0 ? 'Add a property to see it here.' : 'Try changing your search, category or filter.'}
+              {noProperties
+                ? 'Add your first property to see and manage it here.'
+                : search.trim() ? 'Try another title, location or area.'
+                  : 'Choose another filter or property type.'}
 
             </Text>
+
+            {noProperties && (
+              <ButtonV1 title="Add Property" onPress={handleAddProperty} style={styles.addButton} />
+            )}
 
           </GlassCardV1>
 
@@ -896,16 +897,16 @@ const MyPropertiesScreen = ({
   transparent
   animationType="fade"
   statusBarTranslucent
-  onRequestClose={toggleMenu}
+  onRequestClose={() => setMenuOpen(false)}
 >
-  <View style={styles.menuModalRoot}>
+  <SafeAreaView style={styles.menuModalRoot}>
     <Pressable
       style={StyleSheet.absoluteFillObject}
       onPress={() => setMenuOpen(false)}
       accessibilityRole="button"
       accessibilityLabel="Close profile menu"
     />
-    <View style={styles.profileMenu}>
+    <ScrollView style={styles.profileMenu} bounces={false}>
       <Pressable
         style={styles.menuCloseButton}
         onPress={() => setMenuOpen(false)}
@@ -915,16 +916,13 @@ const MyPropertiesScreen = ({
       >
         <Text style={styles.menuCloseText}>×</Text>
       </Pressable>
-      {workspaceMode !== 'authenticated' && <MenuOption icon="↪" title="Sign In" onPress={() => { setMenuOpen(false); onSignIn?.(); }} />}
       <MenuOption icon="✎" title="Edit Profile" onPress={() => { setMenuOpen(false); onEditProfile?.(); }} />
       <MenuOption icon="★" title="Subscription" onPress={() => { setMenuOpen(false); onSubscription?.(); }} />
-      <MenuOption icon="♙" title="Login as Agent" onPress={() => { setMenuOpen(false); onAgentLogin?.(); }} />
-      <MenuOption icon="⌂" title="Login as Builder" onPress={() => { setMenuOpen(false); onBuilderLogin?.(); }} />
-      <MenuOption icon="♡" title="Saved Properties" onPress={() => { setMenuOpen(false); onSavedProperties?.(); }} />
+      <MenuOption icon="♡" title="Favourite" onPress={() => { setMenuOpen(false); onSavedProperties?.(); }} />
       <MenuOption icon="?" title="Help & Support" onPress={() => { setMenuOpen(false); onHelp?.(); }} />
-      <MenuOption icon="↪" title="Logout" danger onPress={() => { setMenuOpen(false); onLogout?.(); }} />
-    </View>
-  </View>
+      <MenuOption icon="↪" title="Log Out" danger onPress={() => { setMenuOpen(false); onLogout?.(); }} />
+    </ScrollView>
+  </SafeAreaView>
 </Modal>
 
       
@@ -1051,8 +1049,7 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: 'rgba(0, 0, 0, 0.62)',
     alignItems: 'flex-end',
-    paddingTop: '14%',
-    paddingRight: 16,
+    paddingBottom: 16,
   },
   menuCloseButton: {
     alignSelf: 'flex-end',
@@ -1072,6 +1069,9 @@ const styles = StyleSheet.create({
     fontWeight: '400',
   },
   profileMenu: {
+    flexGrow: 0,
+    marginTop: 56,
+    marginHorizontal: 16,
     width: '80%',
     maxWidth: 360,
     borderRadius: 22,
