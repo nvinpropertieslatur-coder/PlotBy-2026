@@ -1,7 +1,9 @@
+
 import React, { useMemo, useState, useRef } from 'react';
 import { useFocusEffect } from '@react-navigation/native';
 import { supabase } from '../../lib/supabase';
 import { getPropertyWorkspace } from '../../services/propertyService';
+
 import {
   View,
   Modal,
@@ -12,15 +14,19 @@ import {
   Pressable,
   Animated,
 } from 'react-native';
+
 import { SafeAreaView } from 'react-native-safe-area-context';
+
 import colorsV1 from '../../theme/colors.v1';
 import typographyV1 from '../../theme/typography.v1';
+
 import ButtonV1 from '../../components/ButtonV1';
 import SearchBarV1 from '../../components/SearchBarV1';
 import FilterChipV1 from '../../components/FilterChipV1';
 import PropertyCardV1 from '../../components/PropertyCardV1';
 import PropertyTypeCardV1 from '../../components/PropertyTypeCardV1';
 import GlassCardV1 from '../../components/GlassCardV1';
+
 import { Menu } from 'lucide-react-native';
 import ScreenHeaderV1 from '../../components/ScreenHeaderV1';
 import { NetworkErrorModal } from '../../components/modals';
@@ -59,6 +65,14 @@ const MyPropertiesScreen = ({
   const [reloadToken, setReloadToken] = useState(0);
   const [showNetworkModal, setShowNetworkModal] = useState(false);
 
+  const [search, setSearch] = useState('');
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [typePickerOpen, setTypePickerOpen] = useState(false);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  const menuAnim = useRef(new Animated.Value(0)).current;
+
+  /* LOAD PROPERTIES */
   useFocusEffect(
     React.useCallback(() => {
       let active = true;
@@ -77,7 +91,7 @@ const MyPropertiesScreen = ({
           const workspace = await getPropertyWorkspace();
 
           if (active && request === generation) {
-            setProperties(workspace.properties);
+            setProperties(workspace.properties || []);
             setWorkspaceMode(workspace.mode);
           }
         } catch (error) {
@@ -106,6 +120,7 @@ const MyPropertiesScreen = ({
         }
 
         generation++;
+
         setProperties([]);
         setWorkspaceMode(null);
         setLoading(true);
@@ -113,7 +128,9 @@ const MyPropertiesScreen = ({
         clearTimeout(refreshTimer);
 
         refreshTimer = setTimeout(() => {
-          if (active) void load();
+          if (active) {
+            void load();
+          }
         }, 0);
       });
 
@@ -126,26 +143,18 @@ const MyPropertiesScreen = ({
     }, [reloadToken])
   );
 
-  const [search, setSearch] = useState('');
   const noProperties = properties.length === 0;
-
-  const [activeFilter, setActiveFilter] = useState('all');
 
   const selectedFilterLabel = filters
     .find((filter) => filter.key === activeFilter)
     ?.label.toLowerCase();
 
-  const [typePickerOpen, setTypePickerOpen] = useState(false);
-
-  // FIX: Add Property button handler
+  /* ADD PROPERTY */
   const handleAddProperty = () => {
     setTypePickerOpen(true);
   };
 
-  const [menuOpen, setMenuOpen] = useState(false);
-
-  const menuAnim = useRef(new Animated.Value(0)).current;
-
+  /* PROFILE MENU ANIMATION */
   const toggleMenu = () => {
     if (menuOpen) {
       Animated.timing(menuAnim, {
@@ -231,6 +240,13 @@ const MyPropertiesScreen = ({
     });
   }, [properties, search, activeFilter]);
 
+  /* RETRY LOADING */
+  const handleRetry = () => {
+    setLoadError('');
+    setLoading(true);
+    setReloadToken((value) => value + 1);
+  };
+
   /* UI */
   return (
     <SafeAreaView
@@ -271,7 +287,7 @@ const MyPropertiesScreen = ({
 
           <ButtonV1
             title="+ Add Property"
-            onPress={() => setTypePickerOpen(true)}
+            onPress={handleAddProperty}
             style={styles.addButton}
           />
         </View>
@@ -282,6 +298,7 @@ const MyPropertiesScreen = ({
             <Text style={styles.summaryNumber}>
               {properties.length}
             </Text>
+
             <Text style={styles.summaryLabel}>
               Total Properties
             </Text>
@@ -296,6 +313,7 @@ const MyPropertiesScreen = ({
                 ).length
               }
             </Text>
+
             <Text style={styles.summaryLabel}>
               Verified
             </Text>
@@ -303,10 +321,21 @@ const MyPropertiesScreen = ({
 
           <GlassCardV1 style={styles.summaryCard}>
             <Text style={styles.summaryNumber}>4</Text>
+
             <Text style={styles.summaryLabel}>
               Credits
             </Text>
           </GlassCardV1>
+        </View>
+
+        {/* SEARCH */}
+        <View style={styles.searchSection}>
+          <SearchBarV1
+            value={search}
+            onChangeText={setSearch}
+            placeholder="Search properties or location..."
+            showFilter={false}
+          />
         </View>
 
         {/* FILTERS */}
@@ -325,9 +354,7 @@ const MyPropertiesScreen = ({
                 key={filter.key}
                 label={filter.label}
                 active={activeFilter === filter.key}
-                onPress={() =>
-                  setActiveFilter(filter.key)
-                }
+                onPress={() => setActiveFilter(filter.key)}
               />
             ))}
           </ScrollView>
@@ -339,6 +366,7 @@ const MyPropertiesScreen = ({
             <Text style={styles.resultTitle}>
               Properties
             </Text>
+
             <Text style={styles.resultSubtitle}>
               Your current listings
             </Text>
@@ -349,30 +377,17 @@ const MyPropertiesScreen = ({
           </Text>
         </View>
 
-        {/* SEARCH */}
-        <View style={styles.searchSection}>
-          <SearchBarV1
-            value={search}
-            onChangeText={setSearch}
-            placeholder="Search title, location or area..."
-            showFilter={false}
-          />
-        </View>
-
-        {/* PROPERTY CARDS */}
+        {/* LOADING */}
         {loading && (
           <Text style={styles.emptyText}>
             Loading properties...
           </Text>
         )}
 
+        {/* ERROR */}
         {!loading && loadError !== '' && (
           <Pressable
-            onPress={() => {
-              setLoadError('');
-              setLoading(true);
-              setReloadToken((value) => value + 1);
-            }}
+            onPress={handleRetry}
             accessibilityRole="button"
           >
             <Text style={styles.emptyText}>
@@ -381,18 +396,15 @@ const MyPropertiesScreen = ({
           </Pressable>
         )}
 
+        {/* PROPERTY CARDS */}
         {!loading && !loadError && (
           <View style={styles.propertyList}>
             {filteredProperties.map((property) => (
               <PropertyCardV1
                 key={property.id}
                 property={property}
-                onPress={() =>
-                  onPropertyPress?.(property)
-                }
-                onEdit={() =>
-                  onEditProperty?.(property)
-                }
+                onPress={() => onPropertyPress?.(property)}
+                onEdit={() => onEditProperty?.(property)}
               />
             ))}
           </View>
@@ -422,7 +434,7 @@ const MyPropertiesScreen = ({
                   ? 'Add your first property to see and manage it here.'
                   : search.trim()
                     ? 'Try another title, location or area.'
-                    : 'Choose another filter or property type.'}
+                    : 'Choose another filter or property status.'}
               </Text>
 
               {noProperties && (
@@ -463,9 +475,7 @@ const MyPropertiesScreen = ({
               Select Property Type
             </Text>
 
-            <ScrollView
-              contentContainerStyle={styles.typeGrid}
-            >
+            <ScrollView contentContainerStyle={styles.typeGrid}>
               {propertyTypes.map((item) => (
                 <PropertyTypeCardV1
                   key={item.key}
@@ -473,7 +483,7 @@ const MyPropertiesScreen = ({
                   icon={item.icon}
                   onPress={() => {
                     setTypePickerOpen(false);
-                    onAddProperty(item.key);
+                    onAddProperty?.(item.key);
                   }}
                 />
               ))}
@@ -577,8 +587,7 @@ const MyPropertiesScreen = ({
         loading={loading}
         onRetry={() => {
           setShowNetworkModal(false);
-          setLoading(true);
-          setReloadToken((value) => value + 1);
+          handleRetry();
         }}
         onCancel={() => {
           setShowNetworkModal(false);
