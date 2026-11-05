@@ -12,13 +12,12 @@ import {
 } from 'react-native';
 
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { SafeAreaView } from 'react-native-safe-area-context';
 
 import colorsV1 from '../../theme/colors.v1';
 import typographyV1 from '../../theme/typography.v1';
 
 import GlassCardV1 from '../../components/GlassCardV1';
-import ButtonV1 from '../../components/ButtonV1';
+import { formatPlanAmount, formatPlanCredits, formatPlanDuration, subscriptionPlans } from '../../services/subscriptionPlans';
 import ScreenHeaderV1 from '../../components/ScreenHeaderV1';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
@@ -54,47 +53,10 @@ const featureSlides = [
 
 
 /* =========================================================
-   SUBSCRIPTION PLANS
-   ========================================================= */
-
-const plans = [
-  {
-    id: 'starter',
-    name: 'Starter',
-    icon: '◎',
-    price: '₹1,499',
-    credits: '600',
-    popular: true,
-  },
-
-  {
-    id: 'professional',
-    name: 'Professional',
-    icon: '♕',
-    price: '₹2,599',
-    credits: '1,200',
-    popular: false,
-  },
-
-  {
-    id: 'premium',
-    name: 'Premium',
-    icon: '♛',
-    price: '₹7,499',
-    credits: '3,000',
-    popular: false,
-  },
-];
-
-
-/* =========================================================
    SCREEN
    ========================================================= */
 
-const SubscriptionScreen = ({
-  onBack,
-  onProceedToPay,
-}) => {
+const SubscriptionScreen = ({ navigation }) => {
 
   const insets = useSafeAreaInsets();
 
@@ -105,27 +67,8 @@ const SubscriptionScreen = ({
 
   const [selectedPlan, setSelectedPlan] =
     useState('starter');
-
   const [activeFeature, setActiveFeature] =
   useState(0);
-
-
-  /* =======================================================
-     PAYMENT
-     ======================================================= */
-
-  const handleProceedToPay = () => {
-
-    const selectedPlanData =
-      plans.find(
-        (plan) =>
-          plan.id === selectedPlan
-      );
-
-    onProceedToPay?.({
-      plan: selectedPlanData,
-    });
-  };
 
 
   /* =======================================================
@@ -155,7 +98,7 @@ const SubscriptionScreen = ({
         <ScreenHeaderV1
           title="Subscription"
           subtitle="Premium tools for better property discovery"
-          onBack={onBack}
+          onBack={() => navigation.goBack()}
         />
 
 
@@ -305,7 +248,7 @@ const SubscriptionScreen = ({
 
         <View style={styles.plansContainer}>
 
-          {plans.map((plan) => {
+          {subscriptionPlans.map((plan) => {
 
             const selected =
               selectedPlan === plan.id;
@@ -314,9 +257,12 @@ const SubscriptionScreen = ({
             return (
               <Pressable
                 key={plan.id}
-                onPress={() =>
-                  setSelectedPlan(plan.id)
-                }
+                accessibilityRole="radio"
+                accessibilityState={{ checked: selected }}
+                onPress={() => {
+                  setSelectedPlan(plan.id);
+                  navigation.navigate('OrderSummary', { planId: plan.id });
+                }}
                 style={({ pressed }) => [
                   styles.planPressable,
                   pressed &&
@@ -395,12 +341,12 @@ const SubscriptionScreen = ({
                     adjustsFontSizeToFit
                     minimumFontScale={0.65}
                   >
-                    {plan.price}
+                    {formatPlanAmount(plan.amount)}
                   </Text>
 
 
                   <Text style={styles.perMonth}>
-                    /month
+                    {formatPlanDuration(plan.months)}
                   </Text>
 
 
@@ -416,7 +362,7 @@ const SubscriptionScreen = ({
                       ======================================= */}
 
                   <Text style={styles.creditAmount}>
-                    {plan.credits}
+                    {formatPlanCredits(plan.credits)}
                   </Text>
 
                   <Text style={styles.creditLabel}>
@@ -534,17 +480,6 @@ const SubscriptionScreen = ({
           </Text>
 
         </GlassCardV1>
-
-
-        {/* =================================================
-            PAYMENT BUTTON
-            ================================================= */}
-
-        <ButtonV1
-          title="Proceed to Pay"
-          onPress={handleProceedToPay}
-          style={styles.paymentButton}
-        />
 
 
         <View style={styles.bottomSpace} />
@@ -1270,17 +1205,6 @@ featureDotActive: {
   /* =====================================================
      PAYMENT
      ===================================================== */
-
-  paymentButton: {
-    marginTop: 20,
-
-    marginHorizontal: 10,
-
-    height: 52,
-
-    borderRadius: 26,
-  },
-
 
   bottomSpace: {
     height: 30,

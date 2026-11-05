@@ -3,6 +3,8 @@ export default ({ config }) => ({
 
   plugins: [
     ...(config.plugins || []),
+    "@react-native-community/datetimepicker",
+    ["expo-image-picker", { cameraPermission: false, microphonePermission: false }],
     ["react-native-maps", {
       androidGoogleMapsApiKey: process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_API_KEY,
     }],
