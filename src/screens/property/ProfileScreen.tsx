@@ -1,9 +1,16 @@
 // @ts-nocheck
 import { supabase } from '../../lib/supabase';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as ImagePicker from 'expo-image-picker';
+import DateTimePicker, { DateTimePickerAndroid } from '@react-native-community/datetimepicker';
+import { CalendarDays, UserRound } from 'lucide-react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import {
   Alert,
+  ActivityIndicator,
+  Modal,
   View,
   Text,
   TextInput,
@@ -11,8 +18,8 @@ import {
   Pressable,
   StyleSheet,
   Platform,
-  Modal,
-  TouchableOpacity,
+  Image,
+  KeyboardAvoidingView,
   Animated,
   Easing,
 } from 'react-native';
@@ -26,9 +33,36 @@ import ScreenHeaderV1 from '../../components/ScreenHeaderV1';
 
 
 
+// DOB is a calendar date. Use local calendar parts without converting to UTC.
+function dateKey(date) {
+  return [
+    String(date.getFullYear()).padStart(4, '0'),
+    String(date.getMonth() + 1).padStart(2, '0'),
+    String(date.getDate()).padStart(2, '0'),
+  ].join('-');
+}
+
+function normalizeBirthDate(value) {
+  if (typeof value !== 'string') return '';
+  const text = value.trim();
+  const legacy = /^(\d{2})[-/](\d{2})[-/](\d{4})$/.exec(text);
+  const key = legacy ? [legacy[3], legacy[2], legacy[1]].join('-') : text;
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(key)) return '';
+  const date = pickerDate(key);
+  return dateKey(date) === key ? key : '';
+}
+
+function pickerDate(key) {
+  const [year, month, day] = key.split('-').map(Number);
+  const date = new Date();
+  date.setHours(12, 0, 0, 0);
+  date.setFullYear(year, month - 1, day);
+  return date;
+}
+
 const ProfileScreen = ({
   onBack,
-  onProfilePress,
+  onSignIn,
 }) => {
 
   /* =====================================================
@@ -42,12 +76,20 @@ const ProfileScreen = ({
     useState('');
 
   const [country, setCountry] =
-    useState('India');
+    useState('');
 
   const [city, setCity] =
     useState('');
-  const [cityDropdownOpen, setCityDropdownOpen] =
-  useState(false);
+  const [userId, setUserId] = useState(null);
+  const [photo, setPhoto] = useState(null);
+  const [draftDate, setDraftDate] = useState(null);
+  const [requiresSignIn, setRequiresSignIn] = useState(false);
+  const [loadAttempt, setLoadAttempt] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [picking, setPicking] = useState(false);
+  const [loadError, setLoadError] = useState('');
+  const busy = useRef(false);
 
 const [showSuccess, setShowSuccess] = useState(false);
 
@@ -67,22 +109,132 @@ const [checkScale] = useState(
      SAVE
      ===================================================== */
 
+
   useEffect(() => {
     let active = true;
-    void supabase.auth.getUser().then(({ data }) => {
-      if (!active || !data.user) return;
-      const metadata = data.user.user_metadata;
-      setName(metadata.full_name || ''); setDob(metadata.dob || ''); setCountry(metadata.country || 'India'); setCity(metadata.city || '');
-    });
+    async function loadProfile() {
+      try {
+        setLoading(true);
+        setLoadError('');
+        setRequiresSignIn(false);
+        const { data: { user }, error } = await supabase.auth.getUser();
+        if (!active) return;
+        if (!user) {
+          const signedOut = error?.name === 'AuthSessionMissingError' || !error;
+          setRequiresSignIn(signedOut);
+          setLoadError(signedOut ? 'Sign in to edit your profile.' : 'Unable to load your profile. ' + error.message);
+          return;
+        }
+        if (error) throw error;
+        const metadata = user.user_metadata;
+        setUserId(user.id);
+        setName(metadata.full_name || '');
+        setDob(normalizeBirthDate(metadata.dob));
+        setCountry(metadata.country || '');
+        setCity(metadata.city || '');
+        setPhoto(metadata.avatar_url || null);
+        try {
+          const localPhoto = await AsyncStorage.getItem('plotby:profile-photo:' + user.id);
+          if (active && localPhoto) setPhoto(localPhoto);
+        } catch {
+          if (active) setLoadError('Unable to load the profile photo saved on this device.');
+        }
+      } catch (error) {
+        if (active) setLoadError('Unable to load your profile. ' + error.message);
+      } finally {
+        if (active) setLoading(false);
+      }
+    }
+    void loadProfile();
     return () => { active = false; };
-  }, []);
-  const handleSave = async () => {
-  const { data: { user }, error: userError } = await supabase.auth.getUser();
-  if (userError || !user) { Alert.alert('Sign in required', 'Sign in before saving your profile.'); return; }
-  const { error } = await supabase.auth.updateUser({ data: { full_name: name, dob, country, city } });
-  if (error) { Alert.alert('Unable to save profile', error.message); return; }
+  }, [loadAttempt]);
 
-  console.log('Profile saved');
+  const handlePhoto = async () => {
+    if (!userId) { Alert.alert('Sign in required', 'Sign in to change your profile photo.'); return; }
+    if (busy.current) return;
+    busy.current = true;
+    setPicking(true);
+    try {
+      const result = await ImagePicker.launchImageLibraryAsync({
+        mediaTypes: ['images'],
+        allowsEditing: true,
+        aspect: [1, 1],
+        quality: 0.5,
+        base64: true,
+      });
+      if (result.canceled) return;
+      const base64 = result.assets[0]?.base64;
+      if (!base64 || base64.length > 1_500_000) {
+        Alert.alert('Choose a smaller photo', 'This photo could not be saved. Try a smaller image.');
+        return;
+      }
+      const uri = 'data:image/jpeg;base64,' + base64;
+      await AsyncStorage.setItem('plotby:profile-photo:' + userId, uri);
+      setPhoto(uri);
+    } catch (error) {
+      Alert.alert('Unable to change photo', error.message);
+    } finally {
+      busy.current = false;
+      setPicking(false);
+    }
+  };
+
+  const DateFieldContainer = Platform.OS === 'web' ? View : Pressable;
+  const today = new Date();
+  const todayKey = dateKey(today);
+  const dateValue = dob && dob <= todayKey ? pickerDate(dob) : today;
+
+  function openDatePicker() {
+    if (Platform.OS === 'android') {
+      DateTimePickerAndroid.open({
+        value: dateValue,
+        mode: 'date',
+        display: 'calendar',
+        maximumDate: today,
+        onValueChange: (_, date) => { if (date) setDob(dateKey(date)); },
+      });
+    } else if (Platform.OS === 'ios') {
+      setDraftDate(dateValue);
+    }
+  }
+
+  const handleSave = async () => {
+    if (busy.current || !userId) return;
+    const profile = { full_name: name.trim(), dob, country: country.trim(), city: city.trim() };
+    if (!profile.full_name || !profile.country || !profile.city) {
+      Alert.alert('Complete your profile', 'Enter your name, country or region, and city or location.');
+      return;
+    }
+    if (!dob || normalizeBirthDate(dob) !== dob || dob > dateKey(new Date())) {
+      Alert.alert('Check your date of birth', 'Select a valid date of birth that is today or earlier.');
+      return;
+    }
+    busy.current = true;
+    setSaving(true);
+    try {
+      const { data: { user }, error: userError } = await supabase.auth.getUser();
+      if (userError) throw userError;
+      if (user?.id !== userId) throw new Error('The active account changed. Reopen Edit Profile and try again.');
+      const { data, error } = await supabase.auth.updateUser({ data: profile });
+      if (error) throw error;
+      if (data?.user?.id !== userId ||
+          Object.keys(profile).some(field => data.user.user_metadata?.[field] !== profile[field])) {
+        throw new Error('Supabase did not confirm all profile changes. Please try again.');
+      }
+      setName(profile.full_name);
+      setCountry(profile.country);
+      setCity(profile.city);
+    } catch (error) {
+      if (error?.name === 'AuthSessionMissingError') {
+        setRequiresSignIn(true);
+        setLoadError('Your session ended. Sign in to save your profile.');
+      }
+      Alert.alert('Unable to save profile', error.message);
+      return;
+    } finally {
+      busy.current = false;
+      setSaving(false);
+    }
 
   setShowSuccess(true);
 
@@ -140,9 +292,10 @@ const closeSuccess = () => {
 
 
   return (
-    <View style={styles.screen}>
-
+    <SafeAreaView style={styles.screen}>
+      <KeyboardAvoidingView style={styles.form} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView
+        keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={
           styles.scrollContent
@@ -168,23 +321,17 @@ const closeSuccess = () => {
 
           <View style={styles.avatarOuter}>
 
-            <View style={styles.avatar}>
-
-              <Text style={styles.avatarText}>
-                -
-              </Text>
-
-            </View>
-
-            <Pressable
-              style={({ pressed }) => [
-                styles.cameraButton,
-                pressed && styles.pressed,
-              ]}
+            <Pressable style={styles.avatar}
+              accessibilityRole="button"
+              accessibilityLabel="Change profile photo"
+              disabled={loading || saving || picking || !userId}
+              onPress={handlePhoto}
             >
-              <Text style={styles.cameraIcon}>
-                +
-              </Text>
+
+              {photo
+                ? <Image source={{ uri: photo }} style={styles.avatarImage} />
+                : <UserRound size={42} color={colorsV1.primaryColor} />}
+
             </Pressable>
 
           </View>
@@ -195,9 +342,8 @@ const closeSuccess = () => {
           </Text>
 
 
-          <Text style={styles.profileRole}>
-            Real Estate Agent | PlotBy
-          </Text>
+          {loading && <Text style={styles.label}>Loading profile…</Text>}
+          {!!loadError && <Text accessibilityRole="alert" style={styles.label}>{loadError}</Text>}
 
         </View>
 
@@ -217,18 +363,47 @@ const closeSuccess = () => {
 
           <ProfileField
             label="Name"
+            editable={!!userId && !loading && !saving}
             value={name}
             onChangeText={setName}
           />
 
-          <ProfileField
-            label="Date of Birth"
-            value={dob}
-            onChangeText={setDob}
-          />
+          <View style={styles.fieldContainer}>
+            <Text style={styles.label}>Date of Birth</Text>
+            <DateFieldContainer
+              {...(Platform.OS === 'web' ? {} : {
+                accessibilityRole: 'button',
+                accessibilityLabel: 'Date of Birth',
+                disabled: !userId || loading || saving,
+                onPress: openDatePicker,
+              })}
+              style={[styles.input, styles.dateField]}
+            >
+              <Text style={[styles.dateText, !dob && styles.datePlaceholder]}>
+                {dob ? dob.split('-').reverse().join('-') : 'DD-MM-YYYY'}
+              </Text>
+              <CalendarDays size={20} color={colorsV1.primaryColor} />
+              {Platform.OS === 'web' && React.createElement('input', {
+                type: 'date',
+                'aria-label': 'Date of Birth',
+                value: dob,
+                max: todayKey,
+                disabled: !userId || loading || saving,
+                onClick: event => {
+                  try { event.currentTarget.showPicker?.(); } catch { /* Browser handles the native input. */ }
+                },
+                onChange: event => {
+                  const date = normalizeBirthDate(event.target.value);
+                  if (date && date <= todayKey) setDob(date);
+                },
+                style: { position: 'absolute', inset: 0, width: '100%', height: '100%', opacity: 0, cursor: 'pointer' },
+              })}
+            </DateFieldContainer>
+          </View>
 
           <ProfileField
             label="Country / Region"
+            editable={!!userId && !loading && !saving}
             value={country}
             onChangeText={setCountry}
             
@@ -236,6 +411,7 @@ const closeSuccess = () => {
 
           <ProfileField
             label="City / Location"
+            editable={!!userId && !loading && !saving}
             value={city}
             onChangeText={setCity}
           />
@@ -247,8 +423,10 @@ const closeSuccess = () => {
             ================================================= */}
 
         <ButtonV1
-          title="Save Changes"
-          onPress={handleSave}
+          title={requiresSignIn ? "Sign In" : !loading && !userId ? "Retry Loading Profile" : saving ? "Saving…" : "Save Changes"}
+          icon={saving ? <ActivityIndicator color={colorsV1.backgroundColor} /> : null}
+          disabled={loading || saving || picking}
+          onPress={requiresSignIn ? onSignIn : !userId ? () => setLoadAttempt(value => value + 1) : handleSave}
           style={styles.saveButton}
         />
 
@@ -256,6 +434,28 @@ const closeSuccess = () => {
         <View style={styles.bottomSpace} />
 
       </ScrollView>
+      </KeyboardAvoidingView>
+      {draftDate && (
+        <Modal transparent animationType="fade" onRequestClose={() => setDraftDate(null)}>
+          <View style={styles.dateOverlay}>
+            <View style={styles.dateDialog}>
+              <Text style={styles.sectionTitle}>Date of Birth</Text>
+              <DateTimePicker
+                value={draftDate}
+                mode="date"
+                display="inline"
+                maximumDate={today}
+                themeVariant="dark"
+                onValueChange={(_, date) => { if (date) setDraftDate(date); }}
+              />
+              <View style={styles.dateActions}>
+                <ButtonV1 title="Cancel" variant="outline" onPress={() => setDraftDate(null)} />
+                <ButtonV1 title="Done" onPress={() => { setDob(dateKey(draftDate)); setDraftDate(null); }} />
+              </View>
+            </View>
+          </View>
+        </Modal>
+      )}
        {showSuccess && (
   <View style={styles.successOverlay}>
 
@@ -321,7 +521,7 @@ const closeSuccess = () => {
 
       
 
-    </View>
+    </SafeAreaView>
   );
 };
 
@@ -334,8 +534,9 @@ const ProfileField = ({
   label,
   value,
   onChangeText,
-  keyboardType,
-  dropdown = false,
+  placeholder,
+  editable,
+  autoCapitalize = "words",
 }) => {
 
   return (
@@ -351,27 +552,14 @@ const ProfileField = ({
         <TextInput
           value={value}
           onChangeText={onChangeText}
-          keyboardType={keyboardType}
-          style={[
-            styles.input,
-            dropdown &&
-              styles.dropdownInput,
-          ]}
-          placeholderTextColor={
-            colorsV1.textMuted
-          }
-          selectionColor={
-            colorsV1.primaryColor
-          }
+          accessibilityLabel={label}
+          editable={editable}
+          autoCapitalize={autoCapitalize}
+          placeholder={placeholder}
+          style={styles.input}
+          placeholderTextColor={colorsV1.textMuted}
+          selectionColor={colorsV1.primaryColor}
         />
-
-
-        {dropdown && (
-          <Text style={styles.dropdownIcon}>
-            ⌄
-          </Text>
-        )}
-
       </View>
 
     </View>
@@ -603,51 +791,15 @@ const styles = StyleSheet.create({
     elevation: 5,
   },
 
-  avatarText: {
-    color: colorsV1.primaryColor,
-
-    ...typographyV1.h1,
-
-    fontSize: 28,
-
-    fontWeight: '800',
-  },
+  avatarImage: { width: 88, height: 88, borderRadius: 44 },
+  form: { flex: 1 },
 
 
   /* =====================================================
      CAMERA
      ===================================================== */
 
-  cameraButton: {
-    position: 'absolute',
 
-    right: -2,
-    bottom: -2,
-
-    width: 30,
-    height: 30,
-
-    borderRadius: 15,
-
-    alignItems: 'center',
-    justifyContent: 'center',
-
-    backgroundColor:
-      colorsV1.primaryColor,
-
-    borderWidth: 3,
-
-    borderColor:
-      colorsV1.backgroundColor,
-  },
-
-  cameraIcon: {
-    color: colorsV1.black,
-
-    fontSize: 18,
-
-    fontWeight: '700',
-  },
 
 
   /* =====================================================
@@ -714,9 +866,14 @@ const styles = StyleSheet.create({
     ...typographyV1.label,
   },
 
+  dateField: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' },
+  dateText: { color: colorsV1.textPrimary, ...typographyV1.body },
+  datePlaceholder: { color: colorsV1.textMuted },
+  dateOverlay: { flex: 1, justifyContent: 'center', alignItems: 'center', padding: 20, backgroundColor: 'rgba(0,0,0,0.65)' },
+  dateDialog: { width: '100%', maxWidth: 420, padding: 16, gap: 12, backgroundColor: colorsV1.backgroundSecondary, borderRadius: 20 },
+  dateActions: { flexDirection: 'row', justifyContent: 'flex-end', gap: 8 },
   inputWrapper: {
-    height: 46,
-
+    height: 50,
     position: 'relative',
 
     justifyContent: 'center',
@@ -725,8 +882,7 @@ const styles = StyleSheet.create({
   input: {
     width: '100%',
 
-    height: 46,
-
+    height: 50,
     paddingHorizontal: 14,
 
     paddingVertical: 0,
@@ -820,8 +976,8 @@ const styles = StyleSheet.create({
 
   saveButton: {
     marginTop: 20,
-
-    minHeight: 48,
+    width: '100%',
+    minHeight: 52,
 
     borderRadius: 24,
   },
