@@ -1,4 +1,5 @@
 // @ts-nocheck
+import { AgricultureListingFields } from "../../browse/features/agriculture/AgricultureOptions";
 import React, { useMemo, useState } from "react";
 
 import {
@@ -594,6 +595,10 @@ export default function PropertyDetailsStep({
 
       </View>
 
+      {propertyType === 'agriculturalLand' && (
+        <AgricultureListingFields value={data.agricultureDetails}
+          onChange={details => update('agricultureDetails', details)} />
+      )}
       <View style={{ height: 15 }} />
 
     </ScrollView>

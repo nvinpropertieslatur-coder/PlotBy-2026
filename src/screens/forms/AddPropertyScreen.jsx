@@ -23,6 +23,7 @@ import LocationDetailsStep from "./LocationDetails";
 import ContactDetailsStep from "./contactDetails";
 
 import propertyTypes from "./propertyTypes";
+import { agricultureDetails } from "../../browse/features/agriculture/options";
 
 import { showSuccessMessage } from '../../utils/showSuccessMessage';
 import {
@@ -45,8 +46,9 @@ export default function AddPropertyScreen() {
   // PROPERTY TYPE
   // ============================================================
 
+  const storedType = route.params?.property?.property_type;
   const propertyType =
-    route.params?.propertyType || "plot";
+    storedType === 'agriculturalLand' ? storedType : route.params?.propertyType || "plot";
 
   const propertyInfo =
     propertyTypes[propertyType] ||
@@ -79,6 +81,7 @@ export default function AddPropertyScreen() {
         length: "",
         width: "",
         totalArea: "",
+        agricultureDetails: agricultureDetails(null),
         rate: "",
 
         discount: "no",
@@ -137,6 +140,7 @@ export default function AddPropertyScreen() {
       ...(editingProperty ? {
         property: {
           length: String(editingProperty.length ?? ''), width: String(editingProperty.width ?? ''),
+          agricultureDetails: agricultureDetails(editingProperty.agriculture_details),
           totalArea: String(editingProperty.total_area ?? ''), rate: String(editingProperty.rate_per_sqft ?? ''),
           discount: editingProperty.discount ? 'yes' : 'no', discountRate: editingProperty.discount && Number(editingProperty.total_area) > 0 ? String(Math.max(0, Number(editingProperty.rate_per_sqft) - Number(editingProperty.total_amount) / Number(editingProperty.total_area))) : '', socialMediaLink: editingProperty.social_media_link || '', bhk: '', simpleFacing: '',
           facing: ['East', 'West', 'North', 'South'].map(direction => {
@@ -480,6 +484,10 @@ const handleSubmit = async () => {
       const propertyData = {
         length: length,
         width: width,
+        ...(propertyType === 'agriculturalLand' ? {
+          property_type: propertyType,
+          agriculture_details: agricultureDetails(property.agricultureDetails),
+        } : {}),
         total_area: totalArea,
         rate_per_sqft: ratePerSqft,
         discount: property.discount === "yes",
