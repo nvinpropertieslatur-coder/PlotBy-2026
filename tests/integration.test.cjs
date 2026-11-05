@@ -188,3 +188,77 @@ test('no application source imports deprecated core SafeAreaView', () => {
   }
  }
 });
+
+const {
+ isAgriculture, emptyAgricultureFilters, matchesAgriculture, validRange, discountBucket, selectedAgricultureFilters,
+} = load('src/browse/features/agriculture/filters.ts', {
+ './options': load('src/browse/features/agriculture/options.ts'),
+});
+
+test('agriculture filter combines stored location, coordinates, land area, prices and discount', () => {
+ const record = {
+  id: 'farm', type: 'agriculturalLand', city: ' Latur ', address: 'Station Road',
+  latitude: '18.41', longitude: '76.53', total_area: '43560', rate_per_sqft: '100',
+  total_amount: '3920400', discount: true,
+ };
+ const filters = {
+  ...emptyAgricultureFilters, query: ' station ROAD ', city: 'Latur',
+  nearby: { latitude: 18.41, longitude: 76.53, radiusKm: 5 },
+  guntha: { min: '40', max: '40' },
+  perAcre: { min: '4356000', max: '4356000' },
+  total: { min: '3900000', max: '4000000' }, discount: ['none', '10to20'],
+ };
+ assert.equal(isAgriculture(record), true);
+ assert.equal(isAgriculture({ ...record, property_type: 'Plot' }), false);
+ assert.equal(isAgriculture({ id: 'unclassified' }), false);
+ assert.equal(discountBucket(record), '10to20');
+ assert.equal(matchesAgriculture(record, filters), true);
+ assert.equal(selectedAgricultureFilters(filters).length, 8);
+ for (const patch of [
+  { address: undefined }, { city: 'Pune' }, { latitude: '18.70' }, { longitude: null },
+  { total_area: '43559' }, { rate_per_sqft: 101 }, { total_amount: 4356000 }, { discount: null },
+ ]) assert.equal(matchesAgriculture({ ...record, ...patch }, filters), false);
+ const undiscounted = { ...record, total_amount: 4356000, discount: false };
+ assert.equal(matchesAgriculture(undiscounted, { ...filters, total: { min: '', max: '4500000' } }), true);
+ assert.equal(matchesAgriculture(undiscounted, { ...filters, total: { min: '', max: '4500000' }, discount: ['10to20'] }), false);
+ assert.equal(matchesAgriculture(record, { ...emptyAgricultureFilters, area: { min: '1', max: '1' } }), true);
+ assert.equal(matchesAgriculture({ id: 'missing' }, emptyAgricultureFilters), true);
+ assert.equal(matchesAgriculture({ id: 'missing' }, { ...filters, nearby: null }), false);
+ assert.equal(validRange({ min: '2', max: '1' }), false);
+ assert.equal(validRange({ min: '', max: '1.25' }), true);
+});
+
+test('agriculture listings without coordinates can appear in the list without becoming map markers', () => {
+ const { isValidPlot } = load('src/browse/features/map/types.ts');
+ const record = { id: 'farm', type: 'agriculturalLand', total_area: '43560' };
+ const plot = propertyToPlot(record, { allowMissingCoordinates: true });
+ assert.equal(plot.areaSqft, 43560);
+ assert.equal(isValidPlot(plot), false);
+ assert.equal(propertyToPlot(record), null);
+});
+
+test('Sheti options come from the same stored details used by the listing form', () => {
+ const { agricultureDetails, agricultureOptions } = load('src/browse/features/agriculture/options.ts');
+ const details = agricultureDetails({
+  state: ' Maharashtra ', town: 'Ausa', roadAccess: ['Samaiik Road'], landType: ['Kali'],
+  waterSource: ['Bor', 'Vihir', 'unsupported'],
+ });
+ const listing = {
+  id: 'farm', property_type: 'agriculturalLand', agriculture_details: details,
+  city: 'Latur', latitude: 18.41, longitude: 76.53, total_area: 43560, discount: true,
+ };
+ const filters = {
+  ...emptyAgricultureFilters, state: 'maha', town: 'ausa', city: 'Latur',
+  latitude: '18.41', longitude: '76.53', discountAvailable: true,
+  area: { min: '1', max: '1' }, guntha: { min: '40', max: '40' },
+  options: { roadAccess: ['Kachha Road', 'Samaiik Road'], landType: ['Kali'], waterSource: ['Vihir', 'Cannel'] },
+ };
+ assert.equal(isAgriculture(listing), true);
+ assert.deepEqual(details.waterSource, ['Bor', 'Vihir']);
+ assert.equal(agricultureOptions.roadAccess.length, 4);
+ assert.equal(matchesAgriculture(listing, filters), true);
+ assert.equal(matchesAgriculture(listing, { ...filters, latitude: '19' }), false);
+ assert.equal(matchesAgriculture(listing, { ...filters, options: { ...filters.options, landType: ['Malran'] } }), false);
+ assert.equal(matchesAgriculture({ ...listing, agriculture_details: null }, filters), false);
+ assert.equal(matchesAgriculture(listing, emptyAgricultureFilters), true);
+});

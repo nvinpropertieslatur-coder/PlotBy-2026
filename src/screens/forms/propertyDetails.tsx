@@ -1,5 +1,6 @@
 // @ts-nocheck
-import React, { useState } from "react";
+import React, { useMemo, useState } from "react";
+import { AgricultureListingFields } from "../../browse/features/agriculture/AgricultureOptions";
 
 import {
   View,
@@ -10,7 +11,6 @@ import {
 } from "react-native";
 
 import { Ionicons } from "@expo/vector-icons";
-
 import styles from "./addpropertyStyle";
 import { calculateLandRate } from "./landRateCalculator";
 
@@ -21,10 +21,7 @@ export default function PropertyDetailsStep({
 }) {
   const [showTotalRate, setShowTotalRate] = useState(false);
 
-  // ============================================================
   // UPDATE PROPERTY DATA
-  // ============================================================
-
   const update = (key, value) => {
     onChange({
       ...data,
@@ -32,76 +29,353 @@ export default function PropertyDetailsStep({
     });
   };
 
+  // AGRICULTURAL LAND DETAILS
   if (propertyType === "agriculturalLand") {
-    const pricing = calculateLandRate({ acres: data.acres, guntha: data.gunta, ratePerAcre: data.ratePerAcre, discount: data.landDiscount, discountType: "percentage" });
+    const pricing = calculateLandRate({
+      acres: data.acres,
+      guntha: data.gunta,
+      ratePerAcre: data.ratePerAcre,
+      discount: data.landDiscount,
+      discountType: "percentage",
+    });
+
     const choices = (key, values) => (
-      <View style={{ flexDirection: "row", flexWrap: "wrap", gap: 10, marginBottom: 18 }}>
+      <View
+        style={{
+          flexDirection: "row",
+          flexWrap: "wrap",
+          gap: 10,
+          marginBottom: 18,
+        }}
+      >
         {values.map((value) => (
-          <TouchableOpacity key={value} onPress={() => update(key, key === "discountType" ? value : data[key] === value ? "" : value)} style={{ paddingHorizontal: 16, paddingVertical: 11, borderRadius: 18, borderWidth: 1, borderColor: (data[key] || (key === "discountType" ? "fixed" : "")) === value ? "#8CFF32" : "#444", backgroundColor: (data[key] || (key === "discountType" ? "fixed" : "")) === value ? "#26351C" : "#151515" }}>
-            <Ionicons name={key === "landType" ? (value === "Kali" ? "leaf-outline" : "sunny-outline") : "trail-sign-outline"} size={18} color="#8CFF32" />
+          <TouchableOpacity
+            key={value}
+            onPress={() =>
+              update(
+                key,
+                key === "discountType"
+                  ? value
+                  : data[key] === value
+                  ? ""
+                  : value
+              )
+            }
+            style={{
+              paddingHorizontal: 16,
+              paddingVertical: 11,
+              borderRadius: 18,
+              borderWidth: 1,
+              borderColor:
+                (data[key] ||
+                  (key === "discountType" ? "fixed" : "")) === value
+                  ? "#8CFF32"
+                  : "#444",
+              backgroundColor:
+                (data[key] ||
+                  (key === "discountType" ? "fixed" : "")) === value
+                  ? "#26351C"
+                  : "#151515",
+            }}
+          >
+            <Ionicons
+              name={
+                key === "landType"
+                  ? value === "Kali"
+                    ? "leaf-outline"
+                    : "sunny-outline"
+                  : "trail-sign-outline"
+              }
+              size={18}
+              color="#8CFF32"
+            />
             <Text style={{ color: "#fff" }}>{value}</Text>
           </TouchableOpacity>
         ))}
       </View>
     );
+
     const field = (label, key, placeholder, numeric = false) => (
       <>
         <Text style={styles.label}>{label}</Text>
-        <TextInput style={styles.input} placeholder={placeholder} placeholderTextColor="#777" keyboardType={numeric ? "decimal-pad" : "default"} value={data[key] || ""} onChangeText={(value) => update(key, value)} />
+        <TextInput
+          style={styles.input}
+          placeholder={placeholder}
+          placeholderTextColor="#777"
+          keyboardType={numeric ? "decimal-pad" : "default"}
+          value={data[key] || ""}
+          onChangeText={(value) => update(key, value)}
+        />
       </>
     );
 
     return (
-      <ScrollView style={styles.scrollView} contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
-        <View style={styles.sectionHeader}><View style={styles.sectionIcon}><Ionicons name="leaf-outline" size={20} color="#000" /></View><Text style={styles.sectionTitle}>Sheti Details</Text></View>
+      <ScrollView
+        style={styles.scrollView}
+        contentContainerStyle={styles.content}
+        keyboardShouldPersistTaps="handled"
+        showsVerticalScrollIndicator={false}
+      >
+        <View style={styles.sectionHeader}>
+          <View style={styles.sectionIcon}>
+            <Ionicons name="leaf-outline" size={20} color="#000" />
+          </View>
+          <Text style={styles.sectionTitle}>Sheti Details</Text>
+        </View>
+
         <Text style={styles.label}>Road Access</Text>
         {choices("roadType", ["Samaik", "Kachha Road", "Dambari"])}
+
         <Text style={styles.label}>Land Area</Text>
+
         <View style={styles.areaRow}>
-          <View style={styles.areaInput}><TextInput style={styles.areaTextInput} placeholder="Acres" placeholderTextColor="#666" keyboardType="decimal-pad" value={data.acres || ""} onChangeText={(value) => update("acres", value.replace(/[^0-9.]/g, ""))} /><Text style={styles.ft}>acre</Text></View>
-          <View style={styles.areaInput}><TextInput style={styles.areaTextInput} placeholder="Guntha" placeholderTextColor="#666" keyboardType="decimal-pad" value={data.gunta || ""} onChangeText={(value) => update("gunta", value.replace(/[^0-9.]/g, ""))} /><Text style={styles.ft}>guntha</Text></View>
+          <View style={styles.areaInput}>
+            <TextInput
+              style={styles.areaTextInput}
+              placeholder="Acres"
+              placeholderTextColor="#666"
+              keyboardType="decimal-pad"
+              value={data.acres || ""}
+              onChangeText={(value) =>
+                update("acres", value.replace(/[^0-9.]/g, ""))
+              }
+            />
+            <Text style={styles.ft}>acre</Text>
+          </View>
+
+          <View style={styles.areaInput}>
+            <TextInput
+              style={styles.areaTextInput}
+              placeholder="Guntha"
+              placeholderTextColor="#666"
+              keyboardType="decimal-pad"
+              value={data.gunta || ""}
+              onChangeText={(value) =>
+                update("gunta", value.replace(/[^0-9.]/g, ""))
+              }
+            />
+            <Text style={styles.ft}>guntha</Text>
+          </View>
         </View>
+
         {field("Rate per acre", "ratePerAcre", "Enter rate per acre", true)}
-        <View style={{ padding: 16, marginTop: 8, borderRadius: 16, backgroundColor: "#191f1b", borderWidth: 1, borderColor: "#38443b" }}>
+
+        <View
+          style={{
+            padding: 16,
+            marginTop: 8,
+            borderRadius: 16,
+            backgroundColor: "#191f1b",
+            borderWidth: 1,
+            borderColor: "#38443b",
+          }}
+        >
           <Text style={{ color: "#aaa", fontSize: 14 }}>Total Rate</Text>
-          <Text style={{ color: "#8CFF32", fontSize: 22, fontWeight: "800", marginTop: 6 }}>₹ {pricing.basicPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</Text>
+          <Text
+            style={{
+              color: "#8CFF32",
+              fontSize: 22,
+              fontWeight: "800",
+              marginTop: 6,
+            }}
+          >
+            ₹ {pricing.basicPrice.toLocaleString("en-IN", {
+              maximumFractionDigits: 2,
+            })}
+          </Text>
         </View>
+
         {field("Discount (%)", "landDiscount", "Enter discount percentage", true)}
-        <View style={{ padding: 16, marginBottom: 20, borderRadius: 16, backgroundColor: "#191f1b", borderWidth: 1, borderColor: "#38443b" }}>
-          <Text style={{ color: "#aaa", fontSize: 14 }}>Calculated Rate After Discount</Text>
-          <Text style={{ color: "#8CFF32", fontSize: 22, fontWeight: "800", marginTop: 6 }}>₹ {pricing.finalPrice.toLocaleString("en-IN", { maximumFractionDigits: 2 })}</Text>
+
+        <View
+          style={{
+            padding: 16,
+            marginBottom: 20,
+            borderRadius: 16,
+            backgroundColor: "#191f1b",
+            borderWidth: 1,
+            borderColor: "#38443b",
+          }}
+        >
+          <Text style={{ color: "#aaa", fontSize: 14 }}>
+            Calculated Rate After Discount
+          </Text>
+          <Text
+            style={{
+              color: "#8CFF32",
+              fontSize: 22,
+              fontWeight: "800",
+              marginTop: 6,
+            }}
+          >
+            ₹ {pricing.finalPrice.toLocaleString("en-IN", {
+              maximumFractionDigits: 2,
+            })}
+          </Text>
         </View>
+
         <Text style={styles.label}>Jamin Type</Text>
         {choices("landType", ["Kali", "Malran"])}
+
         <Text style={styles.sectionTitle}>Water Sources</Text>
+
         {[
-          ["Borewell (Bor)", "water-outline"], ["Well (Vihir)", "ellipse-outline"], ["Canal", "git-branch-outline"],
+          ["Borewell (Bor)", "water-outline"],
+          ["Well (Vihir)", "ellipse-outline"],
+          ["Canal", "git-branch-outline"],
         ].map(([label, icon]) => {
           const sources = data.waterSources || [];
-          const index = sources.findIndex((source) => source.type === label);
+          const index = sources.findIndex(
+            (source) => source.type === label
+          );
           const selected = index >= 0;
           const source = selected ? sources[index] : null;
-          const updateSource = (patch) => update("waterSources", sources.map((item, itemIndex) => itemIndex === index ? { ...item, ...patch } : item));
+
+          const updateSource = (patch) =>
+            update(
+              "waterSources",
+              sources.map((item, itemIndex) =>
+                itemIndex === index ? { ...item, ...patch } : item
+              )
+            );
+
           return (
             <View key={label} style={{ marginTop: 10 }}>
-              <View style={{ flexDirection: "row", alignItems: "center", gap: 10 }}>
-                <TouchableOpacity onPress={() => update("waterSources", selected ? sources.filter((item) => item.type !== label) : [...sources, { type: label, quantity: "1" }])} accessibilityRole="checkbox" accessibilityState={{ checked: selected }} style={{ width: 30, height: 40, alignItems: "center", justifyContent: "center" }}>
-                  <Ionicons name={selected ? "checkbox" : "square-outline"} size={23} color={selected ? "#8CFF32" : "#aaa"} />
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  gap: 10,
+                }}
+              >
+                <TouchableOpacity
+                  onPress={() =>
+                    update(
+                      "waterSources",
+                      selected
+                        ? sources.filter((item) => item.type !== label)
+                        : [...sources, { type: label, quantity: "1" }]
+                    )
+                  }
+                  accessibilityRole="checkbox"
+                  accessibilityState={{ checked: selected }}
+                  style={{
+                    width: 30,
+                    height: 40,
+                    alignItems: "center",
+                    justifyContent: "center",
+                  }}
+                >
+                  <Ionicons
+                    name={selected ? "checkbox" : "square-outline"}
+                    size={23}
+                    color={selected ? "#8CFF32" : "#aaa"}
+                  />
                 </TouchableOpacity>
-                <View style={{ flex: 1, minHeight: 48, borderRadius: 24, borderWidth: 1, borderColor: selected ? "#8CFF32" : "#444", paddingLeft: 14, paddingRight: 6, flexDirection: "row", alignItems: "center", justifyContent: "space-between" }}>
-                  <View style={{ flexDirection: "row", alignItems: "center", gap: 8, flex: 1 }}><Ionicons name={icon} size={18} color={selected ? "#8CFF32" : "#aaa"} /><Text style={{ color: "#fff" }}>{label}</Text></View>
+
+                <View
+                  style={{
+                    flex: 1,
+                    minHeight: 48,
+                    borderRadius: 24,
+                    borderWidth: 1,
+                    borderColor: selected ? "#8CFF32" : "#444",
+                    paddingLeft: 14,
+                    paddingRight: 6,
+                    flexDirection: "row",
+                    alignItems: "center",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 8,
+                      flex: 1,
+                    }}
+                  >
+                    <Ionicons
+                      name={icon}
+                      size={18}
+                      color={selected ? "#8CFF32" : "#aaa"}
+                    />
+                    <Text style={{ color: "#fff" }}>{label}</Text>
+                  </View>
+
                   {selected && (
-                    <View style={{ flexDirection: "row", alignItems: "center", gap: 8 }}>
-                      <TouchableOpacity onPress={() => updateSource({ quantity: String(Math.max(1, (Number(source.quantity) || 1) - 1)) })} accessibilityRole="button" accessibilityLabel={`Decrease ${label} quantity`} style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        alignItems: "center",
+                        gap: 8,
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() =>
+                          updateSource({
+                            quantity: String(
+                              Math.max(
+                                1,
+                                (Number(source.quantity) || 1) - 1
+                              )
+                            ),
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`Decrease ${label} quantity`}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
                         <Ionicons name="remove" size={20} color="#8CFF32" />
                       </TouchableOpacity>
-                      <Text style={{ color: "#fff", minWidth: 18, textAlign: "center", fontWeight: "700" }}>{Number(source.quantity) || 1}</Text>
-                      <TouchableOpacity onPress={() => updateSource({ quantity: String((Number(source.quantity) || 1) + 1) })} accessibilityRole="button" accessibilityLabel={`Increase ${label} quantity`} style={{ width: 34, height: 34, borderRadius: 17, alignItems: "center", justifyContent: "center" }}>
+
+                      <Text
+                        style={{
+                          color: "#fff",
+                          minWidth: 18,
+                          textAlign: "center",
+                          fontWeight: "700",
+                        }}
+                      >
+                        {Number(source.quantity) || 1}
+                      </Text>
+
+                      <TouchableOpacity
+                        onPress={() =>
+                          updateSource({
+                            quantity: String(
+                              (Number(source.quantity) || 1) + 1
+                            ),
+                          })
+                        }
+                        accessibilityRole="button"
+                        accessibilityLabel={`Increase ${label} quantity`}
+                        style={{
+                          width: 34,
+                          height: 34,
+                          borderRadius: 17,
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}
+                      >
                         <Ionicons name="add" size={20} color="#8CFF32" />
                       </TouchableOpacity>
                     </View>
                   )}
-                  {!selected && <Ionicons name="chevron-down" size={18} color="#8CFF32" />}
+
+                  {!selected && (
+                    <Ionicons
+                      name="chevron-down"
+                      size={18}
+                      color="#8CFF32"
+                    />
+                  )}
                 </View>
               </View>
             </View>
@@ -111,10 +385,7 @@ export default function PropertyDetailsStep({
     );
   }
 
-  // ============================================================
   // LENGTH
-  // ============================================================
-
   const handleLengthChange = (text) => {
     const updatedData = {
       ...data,
@@ -133,10 +404,7 @@ export default function PropertyDetailsStep({
     onChange(updatedData);
   };
 
-  // ============================================================
   // WIDTH
-  // ============================================================
-
   const handleWidthChange = (text) => {
     const updatedData = {
       ...data,
@@ -155,12 +423,8 @@ export default function PropertyDetailsStep({
     onChange(updatedData);
   };
 
-  // ============================================================
   // TOTAL AREA
-  // ============================================================
-
   const totalArea = parseFloat(data.totalArea) || 0;
-
   const rate = parseFloat(data.rate) || 0;
 
   const discountRate =
@@ -168,68 +432,45 @@ export default function PropertyDetailsStep({
       ? parseFloat(data.discountRate) || 0
       : 0;
 
-  // ============================================================
   // TOTAL AMOUNT
-  // ============================================================
-
   const totalRate = totalArea * (rate - discountRate);
 
-  // ============================================================
   // FORMAT INDIAN AMOUNT
-  // ============================================================
-
   const formatIndianAmount = (amount) => {
     const value = Number(amount) || 0;
 
     if (value >= 10000000) {
       const crore = value / 10000000;
-
-      return `${crore % 1 === 0
-        ? crore
-        : crore.toFixed(2)} Crore`;
+      return `${crore % 1 === 0 ? crore : crore.toFixed(2)} Crore`;
     }
 
     if (value >= 100000) {
       const lakh = value / 100000;
-
-      return `${lakh % 1 === 0
-        ? lakh
-        : lakh.toFixed(2)} Lakh`;
+      return `${lakh % 1 === 0 ? lakh : lakh.toFixed(2)} Lakh`;
     }
 
     if (value >= 1000) {
       const thousand = value / 1000;
-
-      return `${thousand % 1 === 0
-        ? thousand
-        : thousand.toFixed(2)} Thousand`;
+      return `${thousand % 1 === 0 ? thousand : thousand.toFixed(2)} Thousand`;
     }
 
     return value.toFixed(2);
   };
 
-  // ============================================================
   // FACING
-  // ============================================================
-
   const toggleFacing = (index) => {
-    const updatedFacing = [
-      ...(data.facing || []),
-    ];
+    const updatedFacing = [...(data.facing || [])];
 
     updatedFacing[index] = {
       ...updatedFacing[index],
-      selected:
-        !updatedFacing[index].selected,
+      selected: !updatedFacing[index].selected,
     };
 
     update("facing", updatedFacing);
   };
 
   const handleFacingText = (index, text) => {
-    const updatedFacing = [
-      ...(data.facing || []),
-    ];
+    const updatedFacing = [...(data.facing || [])];
 
     updatedFacing[index] = {
       ...updatedFacing[index],
@@ -239,10 +480,7 @@ export default function PropertyDetailsStep({
     update("facing", updatedFacing);
   };
 
-  // ============================================================
   // PROPERTY TYPE NAME
-  // ============================================================
-
   const getPropertyTypeName = () => {
     if (propertyType === "agriculturalLand") {
       return "Agricultural Land";
@@ -258,10 +496,7 @@ export default function PropertyDetailsStep({
     );
   };
 
-  // ============================================================
-  // UI
-  // ============================================================
-
+  // NORMAL PROPERTY UI
   return (
     <ScrollView
       style={styles.scrollView}
@@ -269,52 +504,18 @@ export default function PropertyDetailsStep({
       showsVerticalScrollIndicator={false}
       keyboardShouldPersistTaps="handled"
     >
-
-      {/* ======================================================
-          SECTION HEADER
-      ====================================================== */}
-
       <View style={styles.sectionHeader}>
-
         <View style={styles.sectionIcon}>
-          <Ionicons
-            name="home-outline"
-            size={20}
-            color="#000"
-          />
+          <Ionicons name="home-outline" size={20} color="#000" />
         </View>
 
-        <Text style={styles.sectionTitle}>
-          Property Details
-        </Text>
-
+        <Text style={styles.sectionTitle}>Property Details</Text>
       </View>
 
-      {/* ======================================================
-          PROPERTY TYPE
-      ====================================================== */}
-
-      {/* <View style={styles.propertyTypeBadge}>
-
-
-        <Text style={styles.propertyTypeText}>
-          {getPropertyTypeName()}
-        </Text>
-
-      </View> */}
-
-      {/* ======================================================
-          AREA
-      ====================================================== */}
-
-      <Text style={styles.label}>
-        Area*
-      </Text>
+      <Text style={styles.label}>Area*</Text>
 
       <View style={styles.areaRow}>
-
         <View style={styles.areaInput}>
-
           <TextInput
             style={styles.areaTextInput}
             placeholder="Length"
@@ -324,18 +525,10 @@ export default function PropertyDetailsStep({
             onChangeText={handleLengthChange}
           />
 
-          <Text style={styles.ft}>
-            ft
-          </Text>
-
+          <Text style={styles.ft}>ft</Text>
         </View>
 
-        {/* ==================================================
-            WIDTH
-        ================================================== */}
-
         <View style={styles.areaInput}>
-
           <TextInput
             style={styles.areaTextInput}
             placeholder="Width"
@@ -345,29 +538,14 @@ export default function PropertyDetailsStep({
             onChangeText={handleWidthChange}
           />
 
-          <Text style={styles.ft}>
-            ft
-          </Text>
-
+          <Text style={styles.ft}>ft</Text>
         </View>
-
       </View>
 
-      {/* ======================================================
-          TOTAL AREA
-      ====================================================== */}
-
-      <Text style={styles.label}>
-        Total Area*
-      </Text>
+      <Text style={styles.label}>Total Area*</Text>
 
       <View style={styles.inputWithIcon}>
-
-        <Ionicons
-          name="resize-outline"
-          size={20}
-          color="#8CFF32"
-        />
+        <Ionicons name="resize-outline" size={20} color="#8CFF32" />
 
         <TextInput
           style={styles.iconInput}
@@ -375,30 +553,16 @@ export default function PropertyDetailsStep({
           placeholderTextColor="#666"
           keyboardType="numeric"
           value={data.totalArea || ""}
-          onChangeText={(text) =>
-            update("totalArea", text)
-          }
+          onChangeText={(text) => update("totalArea", text)}
         />
 
-        <Text style={styles.ft}>
-          sqft
-        </Text>
-
+        <Text style={styles.ft}>sqft</Text>
       </View>
 
-      {/* ======================================================
-          RATE PER SQFT
-      ====================================================== */}
-
-      <Text style={styles.label}>
-        Rate per sqft*
-      </Text>
+      <Text style={styles.label}>Rate per sqft*</Text>
 
       <View style={styles.inputWithIcon}>
-
-        <Text style={styles.currencySymbol}>
-          ₹
-        </Text>
+        <Text style={styles.currencySymbol}>₹</Text>
 
         <TextInput
           style={styles.iconInput}
@@ -406,150 +570,88 @@ export default function PropertyDetailsStep({
           placeholderTextColor="#666"
           keyboardType="numeric"
           value={data.rate || ""}
-          onChangeText={(text) =>
-            update("rate", text)
-          }
+          onChangeText={(text) => update("rate", text)}
         />
 
-        <Text style={styles.ft}>
-          sqft
-        </Text>
-
+        <Text style={styles.ft}>sqft</Text>
       </View>
 
-      {/* ======================================================
-          DISCOUNT
-      ====================================================== */}
-
-      <Text style={styles.label}>
-        Discount*
-      </Text>
+      <Text style={styles.label}>Discount*</Text>
 
       <View style={styles.radioContainer}>
+        <TouchableOpacity
+          style={styles.radioItem}
+          onPress={() => update("discount", "yes")}
+          activeOpacity={0.8}
+        >
+          <View
+            style={[
+              styles.radio,
+              data.discount === "yes" && styles.radioSelected,
+            ]}
+          >
+            {data.discount === "yes" && (
+              <View style={styles.radioDot} />
+            )}
+          </View>
 
-        {/* YES */}
+          <Text style={styles.radioText}>Yes</Text>
+        </TouchableOpacity>
 
         <TouchableOpacity
           style={styles.radioItem}
           onPress={() =>
-            update("discount", "yes")
-          }
-          activeOpacity={0.8}
-        >
-
-          <View
-            style={[
-              styles.radio,
-              data.discount === "yes" &&
-                styles.radioSelected,
-            ]}
-          >
-
-            {data.discount === "yes" && (
-              <View style={styles.radioDot} />
-            )}
-
-          </View>
-
-          <Text style={styles.radioText}>
-            Yes
-          </Text>
-
-        </TouchableOpacity>
-
-        {/* NO */}
-
-        <TouchableOpacity
-          style={styles.radioItem}
-          onPress={() => {
             onChange({
               ...data,
               discount: "no",
               discountRate: "",
-            });
-          }}
+            })
+          }
           activeOpacity={0.8}
         >
-
           <View
             style={[
               styles.radio,
-              data.discount !== "yes" &&
-                styles.radioSelected,
+              data.discount !== "yes" && styles.radioSelected,
             ]}
           >
-
             {data.discount !== "yes" && (
               <View style={styles.radioDot} />
             )}
-
           </View>
 
-          <Text style={styles.radioText}>
-            No
-          </Text>
-
+          <Text style={styles.radioText}>No</Text>
         </TouchableOpacity>
-
       </View>
-
-      {/* ======================================================
-          DISCOUNT RATE
-      ====================================================== */}
 
       {data.discount === "yes" && (
         <>
-
-          <Text style={styles.label}>
-            Discount Rate
-          </Text>
+          <Text style={styles.label}>Discount Rate</Text>
 
           <View style={styles.inputWithIcon}>
-
-            <Ionicons
-              name="pricetag-outline"
-              size={20}
-              color="#8CFF32"
-            />
+            <Ionicons name="pricetag-outline" size={20} color="#8CFF32" />
 
             <TextInput
               style={styles.iconInput}
               placeholder="Enter discount"
               placeholderTextColor="#666"
               keyboardType="numeric"
-              value={
-                data.discountRate || ""
-              }
+              value={data.discountRate || ""}
               onChangeText={(text) =>
-                update(
-                  "discountRate",
-                  text
-                )
+                update("discountRate", text)
               }
             />
 
-            <Text style={styles.ft}>
-              sqft
-            </Text>
-
+            <Text style={styles.ft}>sqft</Text>
           </View>
-
         </>
       )}
 
-      {/* ======================================================
-          TOTAL AMOUNT
-      ====================================================== */}
-
-      <Text style={styles.label}>
-        Total Amount
-      </Text>
+      <Text style={styles.label}>Total Amount</Text>
 
       <TouchableOpacity
         style={styles.totalRateBox}
-        onPress={() =>
-          setShowTotalRate(!showTotalRate)
-        }
+        onPress={() => setShowTotalRate(!showTotalRate)}
         activeOpacity={0.8}
       >
         {showTotalRate ? (
@@ -557,101 +659,60 @@ export default function PropertyDetailsStep({
             ₹ {formatIndianAmount(totalRate)}
           </Text>
         ) : (
-          <Ionicons
-            name="cash-outline"
-            size={24}
-            color="#8CFF32"
-          />
+          <Ionicons name="cash-outline" size={24} color="#8CFF32" />
         )}
       </TouchableOpacity>
 
-      {/* ======================================================
-          FACING
-      ====================================================== */}
+      <Text style={styles.label}>Facing*</Text>
 
-      <Text style={styles.label}>
-        Facing*
-      </Text>
-
-      {(data.facing || []).map(
-        (item, index) => (
-
-          <View
-            key={item.direction}
-            style={
-              styles.facingRowContainer
-            }
+      {(data.facing || []).map((item, index) => (
+        <View
+          key={item.direction}
+          style={styles.facingRowContainer}
+        >
+          <TouchableOpacity
+            style={styles.facingRow}
+            onPress={() => toggleFacing(index)}
+            activeOpacity={0.8}
           >
-
-            <TouchableOpacity
-              style={styles.facingRow}
-              onPress={() =>
-                toggleFacing(index)
-              }
-              activeOpacity={0.8}
+            <View
+              style={[
+                styles.checkbox,
+                item.selected && styles.checkedCheckbox,
+              ]}
             >
+              {item.selected && (
+                <Ionicons
+                  name="checkmark"
+                  size={15}
+                  color="#000"
+                />
+              )}
+            </View>
 
-              <View
-                style={[
-                  styles.checkbox,
-                  item.selected &&
-                    styles.checkedCheckbox,
-                ]}
-              >
+            <Text style={styles.facingText}>
+              {item.direction}
+            </Text>
+          </TouchableOpacity>
 
-                {item.selected && (
-                  <Ionicons
-                    name="checkmark"
-                    size={15}
-                    color="#000"
-                  />
-                )}
+          {item.selected && (
+            <TextInput
+              style={styles.facingInput}
+              placeholder="Enter facing details"
+              placeholderTextColor="#666"
+              value={item.value || ""}
+              onChangeText={(text) =>
+                handleFacingText(index, text)
+              }
+            />
+          )}
+        </View>
+      ))}
 
-              </View>
-
-              <Text
-                style={styles.facingText}
-              >
-                {item.direction}
-              </Text>
-
-            </TouchableOpacity>
-
-            {item.selected && (
-              <TextInput
-                style={styles.facingInput}
-                placeholder="Enter facing details"
-                placeholderTextColor="#666"
-                value={item.value || ""}
-                onChangeText={(text) =>
-                  handleFacingText(
-                    index,
-                    text
-                  )
-                }
-              />
-            )}
-
-          </View>
-
-        )
-      )}
-
-      {/* ======================================================
-          SOCIAL MEDIA LINK
-      ====================================================== */}
-
-      <Text style={styles.label}>
-        Social Media Link
-      </Text>
+      <Text style={styles.label}>Social Media Link</Text>
 
       <View style={styles.inputWithIcon}>
-
-        <Ionicons
-          name="link-outline"
-          size={20}
-          color="#8CFF32"
-        />
+        <Ionicons name="link-outline" size={20} color="#8CFF32" />
 
         <TextInput
           style={styles.iconInput}
@@ -659,21 +720,23 @@ export default function PropertyDetailsStep({
           placeholderTextColor="#666"
           keyboardType="url"
           autoCapitalize="none"
-          value={
-            data.socialMediaLink || ""
-          }
+          value={data.socialMediaLink || ""}
           onChangeText={(text) =>
-            update(
-              "socialMediaLink",
-              text
-            )
+            update("socialMediaLink", text)
           }
         />
-
       </View>
 
-      <View style={{ height: 15 }} />
+      {propertyType === "agriculturalLand" && (
+        <AgricultureListingFields
+          value={data.agricultureDetails}
+          onChange={(details) =>
+            update("agricultureDetails", details)
+          }
+        />
+      )}
 
+      <View style={{ height: 15 }} />
     </ScrollView>
   );
 }
